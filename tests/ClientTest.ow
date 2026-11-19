@@ -32,7 +32,7 @@ class FakeRest:
   fn new():
     set this.registered: {}
     set this.last_reply: ""
-    set this.last_defer: -1
+    set this.last_defer: 0
     set this.last_followup: ""
     set this.last_message: ""
     return: 0
