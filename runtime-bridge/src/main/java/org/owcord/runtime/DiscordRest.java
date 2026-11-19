@@ -86,6 +86,34 @@ final class DiscordRest {
         return r.statusCode();
     }
 
+    int sendRichMessage(String channel, String payloadJson) {
+        HttpResponse<String> r = request("POST", "channels/" + snowflake(channel) + "/messages",
+            RichPayload.message(payloadJson), true);
+        check(r);
+        return r.statusCode();
+    }
+    int replyRichInteraction(String id, String token, String payloadJson, boolean ephemeral) {
+        HttpResponse<String> r = request("POST",
+            "interactions/" + snowflake(id) + "/" + interactionToken(token) + "/callback",
+            RichPayload.callback(payloadJson, 4, ephemeral), false);
+        check(r);
+        return r.statusCode();
+    }
+    int updateComponentMessage(String id, String token, String payloadJson) {
+        HttpResponse<String> r = request("POST",
+            "interactions/" + snowflake(id) + "/" + interactionToken(token) + "/callback",
+            RichPayload.callback(payloadJson, 7, false), false);
+        check(r);
+        return r.statusCode();
+    }
+    int openModal(String id, String token, String modalJson) {
+        HttpResponse<String> r = request("POST",
+            "interactions/" + snowflake(id) + "/" + interactionToken(token) + "/callback",
+            RichPayload.modal(modalJson), false);
+        check(r);
+        return r.statusCode();
+    }
+
     static String snowflake(String id) {
         if (id == null || !id.matches("[0-9]{1,22}"))
             throw new IllegalArgumentException("Invalid Discord snowflake");
