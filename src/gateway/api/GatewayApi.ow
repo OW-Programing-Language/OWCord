@@ -1,0 +1,4 @@
+module_type DISCORD_GATEWAY:
+  include NATIVE_LIFECYCLE
+  fn connected() -> int
+  fn poll(timeout_ms int) -> string

@@ -1,0 +1,8 @@
+**/target/
+.ow/
+.ow-deps/
+.env
+.env.*
+!.env.example
+*.class
+.idea/

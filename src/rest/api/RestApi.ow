@@ -1,0 +1,5 @@
+module_type DISCORD_REST:
+  include NATIVE_LIFECYCLE
+  fn register_dev_command(name string, description string) -> int
+  fn reply(interaction_id string, interaction_token string, content string) -> int
+  fn send_message(channel_id string, content string) -> int

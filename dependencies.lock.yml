@@ -1,0 +1,7 @@
+format: 1
+dependencies:
+  - name: "flow"
+    repository: "github"
+    path: "OW-Programing-Language/flOW---OW-Modular-Framework"
+    version: "6d91239698e88994ac6057ea46a176fe79394acb"
+    commit: "6d91239698e88994ac6057ea46a176fe79394acb"
