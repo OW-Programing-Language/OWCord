@@ -1,0 +1,54 @@
+import "../src/events/EventParser.ow"
+
+@Test
+fn normalizesMessageMutationsWithPartialFields():
+  set parser: new EventParser()
+  set edited: parser.decode("{\"type\":\"MESSAGE_UPDATE\",\"data\":{\"id\":\"10\",\"channel_id\":\"20\"}}")
+  call: assert(edited.kind == "message")
+  call: assert(edited.action == "update")
+  call: assert(edited.id == "10")
+  call: assert(edited.channel_id == "20")
+  call: assert(edited.content == "")
+  set removed: parser.decode("{\"type\":\"MESSAGE_DELETE\",\"data\":{\"id\":\"10\",\"guild_id\":\"30\"}}")
+  call: assert(removed.kind == "message")
+  call: assert(removed.action == "delete")
+  call: assert(removed.guild_id == "30")
+
+@Test
+fn parsesMemberAndChannelLifecycleEvents():
+  set parser: new EventParser()
+  set joined: parser.decode("{\"type\":\"GUILD_MEMBER_ADD\",\"data\":{\"guild_id\":\"30\",\"user\":{\"id\":\"55\"}}}")
+  call: assert(joined.kind == "member")
+  call: assert(joined.action == "add")
+  call: assert(joined.user_id == "55")
+  set changed: parser.decode("{\"type\":\"GUILD_MEMBER_UPDATE\",\"data\":{\"guild_id\":\"30\",\"user\":{\"id\":\"55\"}}}")
+  call: assert(changed.kind == "member")
+  call: assert(changed.action == "update")
+  set left: parser.decode("{\"type\":\"GUILD_MEMBER_REMOVE\",\"data\":{\"guild_id\":\"30\",\"user\":{\"id\":\"55\"}}}")
+  call: assert(left.kind == "member")
+  call: assert(left.action == "remove")
+  set channel: parser.decode("{\"type\":\"CHANNEL_DELETE\",\"data\":{\"id\":\"40\",\"guild_id\":\"30\"}}")
+  call: assert(channel.kind == "channel")
+  call: assert(channel.action == "delete")
+  call: assert(channel.id == "40")
+
+@Test
+fn readsInteractionPermissionStringsWithoutFloatingPointConversion():
+  set parser: new EventParser()
+  set request: parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"type\":2,\"id\":\"2\",\"guild_id\":\"30\",\"app_permissions\":\"1152921504606846976\",\"member\":{\"permissions\":\"8192\",\"user\":{\"id\":\"55\"}},\"data\":{\"name\":\"mod\"}}}")
+  call: assert(request.kind == "command")
+  call: assert(request.member_permissions == "8192")
+  call: assert(request.app_permissions == "1152921504606846976")
+  call: assert(request.user_id == "55")
+  set dm: parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"type\":2,\"id\":\"2\",\"data\":{\"name\":\"mod\"}}}")
+  call: assert(dm.member_permissions == "")
+  set resumed: parser.decode("{\"type\":\"RESUMED\",\"data\":{}}")
+  call: assert(resumed.kind == "ready")
+  call: assert(resumed.action == "resumed")
+
+@Test
+fn preservesUnknownEventsRatherThanFabricatingLifecycle():
+  set parser: new EventParser()
+  set unknown: parser.decode("{\"type\":\"SOME_NEW_DISCORD_EVENT\",\"data\":{\"id\":\"10\"}}")
+  call: assert(unknown.kind == "other")
+  call: assert(unknown.name == "SOME_NEW_DISCORD_EVENT")

@@ -44,9 +44,9 @@ fn differentiatesMessagesComponentsAndUnknownEvents():
   call: assert(ready.kind == "ready")
   set idle: parser.decode("{\"type\":\"NONE\",\"data\":{}}")
   call: assert(idle.kind == "none")
-  set other: parser.decode("{\"type\":\"GUILD_CREATE\",\"data\":{}}")
+  set other: parser.decode("{\"type\":\"SOME_UNKNOWN_EVENT\",\"data\":{}}")
   call: assert(other.kind == "other")
-  call: assert(other.name == "GUILD_CREATE")
+  call: assert(other.name == "SOME_UNKNOWN_EVENT")
 
 @Test
 fn rejectsInvalidRegistrationsAndKeepsInsertionOrder():
