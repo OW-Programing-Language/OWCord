@@ -17,6 +17,9 @@ on:
         required: true
         type: string
         default: '1459838511485157481'
+  push:
+    branches: [feat/v0.2-command-router-events]
+    paths: ['.github/workflows/live-discord-smoke.yml']
 permissions:
   contents: read
 concurrency:
