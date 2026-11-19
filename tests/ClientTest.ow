@@ -1,0 +1,108 @@
+# Run with: ow test tests/ClientTest.ow
+# Exercises the public OWCordClient facade without any network or bot token.
+import "../src/client/OWCordClient.ow"
+
+class FakeGateway:
+  field values
+  field index
+
+  fn new():
+    set this.values: [
+      "{\"type\":\"READY\",\"data\":{}}",
+      "{\"type\":\"INTERACTION_CREATE\",\"data\":{\"id\":\"123\",\"token\":\"opaque\",\"type\":2,\"data\":{\"name\":\"ping\",\"options\":[{\"name\":\"target\",\"value\":\"OW\"}]}}}",
+      "{\"type\":\"NONE\",\"data\":{}}"
+    ]
+    set this.index: 0
+    return: 0
+
+  fn poll(timeout_ms):
+    if: this.index >= len(this.values)
+      return: "{\"type\":\"NONE\",\"data\":{}}"
+    set result: this.values[this.index]
+    set this.index: this.index + 1
+    return: result
+
+class FakeRest:
+  field registered
+  field last_reply
+  field last_defer
+  field last_followup
+  field last_message
+
+  fn new():
+    set this.registered: {}
+    set this.last_reply: ""
+    set this.last_defer: -1
+    set this.last_followup: ""
+    set this.last_message: ""
+    return: 0
+
+  fn register_dev_command(name, description):
+    call: map_set(this.registered, name, description)
+    return: 201
+
+  fn reply(id, token, content):
+    set this.last_reply: content
+    return: 204
+
+  fn reply_ephemeral(id, token, content):
+    set this.last_reply: content
+    return: 204
+
+  fn defer(id, token, private):
+    set this.last_defer: private
+    return: 204
+
+  fn followup(token, content):
+    set this.last_followup: content
+    return: 200
+
+  fn followup_ephemeral(token, content):
+    set this.last_followup: content
+    return: 200
+
+  fn send_message(channel_id, content):
+    set this.last_message: content
+    return: 201
+
+@Test
+fn syncsAndRoutesCommandsWithMockTransport():
+  set gateway: new FakeGateway()
+  set rest: new FakeRest()
+  set bot: new OWCordClient(gateway, rest)
+  call: assert(bot.command("ping", "Check latency", "ping_handler") == 1)
+  call: assert(bot.command("hello", "Private greeting", "hello_handler") == 1)
+  call: assert(bot.command("ping", "Duplicate", "other") == 0)
+  call: assert(bot.command_count() == 2)
+  call: assert(bot.sync_dev_commands() == 1)
+  call: assert(map_get(rest.registered, "ping", "") == "Check latency")
+  call: assert(map_get(rest.registered, "hello", "") == "Private greeting")
+
+  set ready: bot.next(0)
+  call: assert(ready.kind == "ready")
+  set action: bot.next(0)
+  call: assert(action.kind == "command")
+  call: assert(action.handler == "ping_handler")
+  call: assert(action.id == "123")
+  call: assert(bot.option(action, "target", "") == "OW")
+  call: assert(bot.reply(action, "Pong!") == 204)
+  call: assert(rest.last_reply == "Pong!")
+  set idle: bot.next(0)
+  call: assert(idle.kind == "none")
+
+@Test
+fn forwardsPrivateAndDeferredResponses():
+  set gateway: new FakeGateway()
+  set rest: new FakeRest()
+  set bot: new OWCordClient(gateway, rest)
+  set event: {id: "123", token: "opaque"}
+  call: assert(bot.reply_private(event, "secret reply") == 204)
+  call: assert(rest.last_reply == "secret reply")
+  call: assert(bot.defer(event, 1) == 204)
+  call: assert(rest.last_defer == 1)
+  call: assert(bot.followup(event, "done") == 200)
+  call: assert(rest.last_followup == "done")
+  call: assert(bot.followup_private(event, "private done") == 200)
+  call: assert(rest.last_followup == "private done")
+  call: assert(bot.send_message("123", "hello") == 201)
+  call: assert(rest.last_message == "hello")
