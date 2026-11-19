@@ -10,6 +10,10 @@ on:
         options:
           - basic
           - components
+  push:
+    branches: [feat/v0.3-rich-components-modals]
+    paths:
+      - '.github/workflows/interactive-discord-session.yml'
 permissions:
   contents: read
 concurrency:
@@ -50,7 +54,7 @@ jobs:
       - name: Install flOW and check interactive OW example
         run: |
           java -jar ow-lang/target/OwIDE.jar deps install
-          if [[ "${{ inputs.demo }}" == "components" ]]; then
+          if [[ "${{ inputs.demo || 'components' }}" == "components" ]]; then
             java -jar ow-lang/target/OwIDE.jar check examples/components_demo/main.ow
           else
             java -jar ow-lang/target/OwIDE.jar check examples/interactive_session/main.ow
@@ -60,7 +64,7 @@ jobs:
         run: |
           set +e
           demo="examples/interactive_session/main.ow"
-          if [[ "${{ inputs.demo }}" == "components" ]]; then
+          if [[ "${{ inputs.demo || 'components' }}" == "components" ]]; then
             demo="examples/components_demo/main.ow"
           fi
           timeout -s TERM 900s java -cp "ow-lang/target/OwIDE.jar:runtime-bridge/target/owcord-runtime-0.1.0-SNAPSHOT.jar" dev.oreo.Main run "$demo"
