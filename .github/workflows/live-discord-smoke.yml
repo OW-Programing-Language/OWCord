@@ -1,6 +1,22 @@
 name: OWCord live Discord smoke test
 on:
   workflow_dispatch:
+    inputs:
+      application_id:
+        description: Discord application ID (not a secret)
+        required: true
+        type: string
+        default: '1572864462447181954'
+      guild_id:
+        description: Development server ID (not a secret)
+        required: true
+        type: string
+        default: '1321509685031075911'
+      channel_id:
+        description: Test channel ID (not a secret)
+        required: true
+        type: string
+        default: '1459838511485157481'
 permissions:
   contents: read
 concurrency:
@@ -12,9 +28,9 @@ jobs:
     timeout-minutes: 8
     env:
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-      DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
-      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
-      DISCORD_TEST_CHANNEL_ID: ${{ secrets.DISCORD_TEST_CHANNEL_ID }}
+      DISCORD_APPLICATION_ID: ${{ inputs.application_id }}
+      DISCORD_GUILD_ID: ${{ inputs.guild_id }}
+      DISCORD_TEST_CHANNEL_ID: ${{ inputs.channel_id }}
       OWCORD_GATEWAY_INTENTS: '513'
     steps:
       - name: Check that development credentials are configured
@@ -22,7 +38,7 @@ jobs:
         run: |
           for name in DISCORD_BOT_TOKEN DISCORD_APPLICATION_ID DISCORD_GUILD_ID DISCORD_TEST_CHANNEL_ID; do
             if [[ -z "${!name}" ]]; then
-              echo "::error::Missing repository Actions secret: ${name}"
+              echo "::error::Missing Discord configuration: ${name}"
               exit 1
             fi
           done
