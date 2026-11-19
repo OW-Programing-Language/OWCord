@@ -1,0 +1,55 @@
+# Interactive live Discord bot to verify human-triggered slash commands.
+# The token is provided ONLY through GitHub Actions environment secret.
+# Never print interaction IDs, tokens, payloads, usernames or private messages.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "interactive: flOW boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+
+  call: assert(bot.command("ping", "Test a public slash command", "ping_handler") == 1)
+  call: assert(bot.command("hello", "Test a private slash command", "hello_handler") == 1)
+  call: assert(bot.command("defer", "Test deferred public response", "defer_handler") == 1)
+  call: assert(bot.command("deferprivate", "Test deferred private response", "deferprivate_handler") == 1)
+  call: assert(bot.sync_dev_commands() == 1, "interactive: register all guild commands")
+
+  set ready: 0
+  while: ready == 0
+    set event: bot.next(1000)
+    if: event.kind == "ready"
+      set ready: 1
+    else if: event.kind == "error"
+      throw: "interactive: Discord Gateway disconnected before READY"
+  print: "OWCORD_INTERACTIVE_READY: /ping /hello /defer /deferprivate registered and bot connected"
+
+  while: 1 == 1
+    set event: bot.next(250)
+    if: event.kind == "command"
+      if: event.handler == "ping_handler"
+        set status: bot.reply(event, "Pong from OWCord! Public reply confirmed.")
+        print: "LIVE_CLICK /ping: Discord callback HTTP " + str(status)
+      else if: event.handler == "hello_handler"
+        set status: bot.reply_private(event, "Hello from OWCord! This response should be visible only to you.")
+        print: "LIVE_CLICK /hello: Discord ephemeral callback HTTP " + str(status)
+      else if: event.handler == "defer_handler"
+        set ack: bot.defer(event, 0)
+        print: "LIVE_CLICK /defer: public defer HTTP " + str(ack)
+        set status: bot.followup(event, "Deferred public follow-up from OWCord works!")
+        print: "LIVE_CLICK /defer: follow-up HTTP " + str(status)
+      else if: event.handler == "deferprivate_handler"
+        set ack: bot.defer(event, 1)
+        print: "LIVE_CLICK /deferprivate: private defer HTTP " + str(ack)
+        set status: bot.followup_private(event, "Deferred private follow-up from OWCord works!")
+        print: "LIVE_CLICK /deferprivate: follow-up HTTP " + str(status)
+    else if: event.kind == "error"
+      throw: "interactive: Discord Gateway error"
