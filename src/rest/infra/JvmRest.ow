@@ -39,3 +39,7 @@ module OWCord.JvmRest: DISCORD_REST
     return: extension("owcord.rest.open_modal", interaction_id, interaction_token, modal_json)
   fn register_dev_command_permissions(name string, description string, permissions string) -> int:
     return: extension("owcord.rest.dev_command_permissions", name, description, permissions)
+  fn register_dev_command_options(name string, description string, options_json string, permissions string) -> int:
+    return: extension("owcord.rest.dev_command_options", name, description, options_json, permissions)
+  fn autocomplete(interaction_id string, interaction_token string, choices_json string) -> int:
+    return: extension("owcord.rest.autocomplete", interaction_id, interaction_token, choices_json)

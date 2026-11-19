@@ -1,0 +1,43 @@
+# Pure OW value builders for Discord slash-command schemas.
+# DiscordCommandPayload validates structure and bounds at the Java transport edge.
+class CommandOptions:
+  fn new():
+    return: 0
+
+  fn string_option(name, description, required, autocomplete):
+    return: {type: 3, name: name, description: description, required: required, autocomplete: autocomplete}
+
+  fn integer_option(name, description, required, autocomplete):
+    return: {type: 4, name: name, description: description, required: required, autocomplete: autocomplete}
+
+  fn number_option(name, description, required, autocomplete):
+    return: {type: 10, name: name, description: description, required: required, autocomplete: autocomplete}
+
+  fn boolean_option(name, description, required):
+    return: {type: 5, name: name, description: description, required: required}
+
+  fn user_option(name, description, required):
+    return: {type: 6, name: name, description: description, required: required}
+
+  fn channel_option(name, description, required):
+    return: {type: 7, name: name, description: description, required: required}
+
+  fn role_option(name, description, required):
+    return: {type: 8, name: name, description: description, required: required}
+
+  fn attachment_option(name, description, required):
+    return: {type: 11, name: name, description: description, required: required}
+
+  fn choice(name, value):
+    return: {name: name, value: value}
+
+  # Use only on string/integer/number options, never together with autocomplete.
+  fn with_choices(option, choices):
+    call: map_set(option, "choices", choices)
+    return: option
+
+  fn subcommand(name, description, options):
+    return: {type: 1, name: name, description: description, options: options}
+
+  fn group(name, description, subcommands):
+    return: {type: 2, name: name, description: description, options: subcommands}

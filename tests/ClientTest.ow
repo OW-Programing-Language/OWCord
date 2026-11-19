@@ -25,6 +25,8 @@ class FakeGateway:
 class FakeRest:
   field registered
   field restricted
+  field options_registered
+  field last_autocomplete
   field last_reply
   field last_defer
   field last_followup
@@ -33,6 +35,8 @@ class FakeRest:
   fn new():
     set this.registered: {}
     set this.restricted: {}
+    set this.options_registered: {}
+    set this.last_autocomplete: ""
     set this.last_reply: ""
     set this.last_defer: 0
     set this.last_followup: ""
@@ -46,6 +50,14 @@ class FakeRest:
   fn register_dev_command_permissions(name, description, permissions):
     call: map_set(this.restricted, name, permissions)
     return: 201
+
+  fn register_dev_command_options(name, description, options_json, permissions):
+    call: map_set(this.options_registered, name, json_parse(options_json))
+    return: 201
+
+  fn autocomplete(id, token, choices_json):
+    set this.last_autocomplete: choices_json
+    return: 204
 
   fn reply(id, token, content):
     set this.last_reply: content
