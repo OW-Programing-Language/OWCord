@@ -26,6 +26,15 @@ class OWCordClient:
     set granted: map_get(event, "member_permissions", "")
     return: extension("owcord.permissions.has", granted, required_permissions)
 
+  fn command_options(name, description, handler, options):
+    return: this.router.add_options(name, description, handler, options)
+
+  fn command_options_permissions(name, description, handler, options, required_permissions):
+    return: this.router.add_options_permissions(name, description, handler, options, required_permissions)
+
+  fn subcommand_handler(name, path, handler):
+    return: this.router.route(name, path, handler)
+
   fn command_count():
     return: this.router.count()
 
@@ -38,7 +47,10 @@ class OWCordClient:
       set name: names[i]
       set required: this.router.permissions(name)
       set status: 0
-      if: required == ""
+      set schema: this.router.options(name)
+      if: schema != ""
+        set status: this.rest.register_dev_command_options(name, this.router.description(name), schema, required)
+      else if: required == ""
         set status: this.rest.register_dev_command(name, this.router.description(name))
       else:
         set status: this.rest.register_dev_command_permissions(name, this.router.description(name), required)
@@ -89,3 +101,7 @@ class OWCordClient:
 
   fn modal_value(event, id, fallback):
     return: this.parser.modal_value(event, id, fallback)
+
+  # Callback type 8; autocomplete interactions must not receive a normal reply.
+  fn autocomplete(event, choices):
+    return: this.rest.autocomplete(event.id, event.token, json(choices))

@@ -4,11 +4,15 @@ class CommandRouter:
   field handlers
   field descriptions
   field command_permissions
+  field command_schemas
+  field routes
 
   fn new():
     set this.handlers: {}
     set this.descriptions: {}
     set this.command_permissions: {}
+    set this.command_schemas: {}
+    set this.routes: {}
     return: 0
 
   fn add(name, description, handler):
@@ -36,6 +40,39 @@ class CommandRouter:
       call: map_set(this.command_permissions, name, required_permissions)
     return: added
 
+  # The bridge validates typed JSON schemas before sending to Discord.
+  fn add_options(name, description, handler, options):
+    set added: this.add(name, description, handler)
+    if: added == 1
+      call: map_set(this.command_schemas, name, json(options))
+    return: added
+
+  fn add_options_permissions(name, description, handler, options, required_permissions):
+    if: required_permissions == ""
+      return: 0
+    set added: this.add_options(name, description, handler, options)
+    if: added == 1
+      call: map_set(this.command_permissions, name, required_permissions)
+    return: added
+
+  # Define route handlers for e.g. "ban" or "users ban".
+  # Base handler remains the fallback for unknown nested routes.
+  fn route(name, path, handler):
+    if: path == ""
+      return: 0
+    if: handler == ""
+      return: 0
+    if: map_has(this.handlers, name) == false
+      return: 0
+    set key: name + ":" + path
+    if: map_has(this.routes, key)
+      return: 0
+    call: map_set(this.routes, key, handler)
+    return: 1
+
+  fn options(name):
+    return: map_get(this.command_schemas, name, "")
+
   fn permissions(name):
     return: map_get(this.command_permissions, name, "")
 
@@ -50,7 +87,11 @@ class CommandRouter:
 
   fn dispatch(event):
     if: event.kind != "command"
-      return: event
+      if: event.kind != "autocomplete"
+        return: event
     set handler: map_get(this.handlers, event.name, "")
+    set path: map_get(event, "path", "")
+    if: path != ""
+      set handler: map_get(this.routes, event.name + ":" + path, handler)
     call: map_set(event, "handler", handler)
     return: event

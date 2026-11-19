@@ -54,6 +54,10 @@ module OWCord.MockRest: DISCORD_REST
     return: 200
   fn register_dev_command_permissions(name string, description string, permissions string) -> int:
     return: 201
+  fn register_dev_command_options(name string, description string, options_json string, permissions string) -> int:
+    return: 201
+  fn autocomplete(interaction_id string, interaction_token string, choices_json string) -> int:
+    return: 204
   fn send_rich(channel_id string, message_json string) -> int:
     return: 201
   fn reply_rich(interaction_id string, interaction_token string, message_json string) -> int:

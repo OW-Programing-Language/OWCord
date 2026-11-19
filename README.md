@@ -120,3 +120,9 @@ Read the [reliability guide](docs/RELIABILITY.md). Java/JUnit local-server tests
 - Existing public OWCord/flOW APIs remain backwards compatible.
 
 See [v0.5 permissions and event guide](docs/PERMISSIONS-EVENTS.md) and [the restricted-command example](examples/permissions_demo/main.ow). Native compiler support remains a separate `ow-lang` milestone.
+
+## v0.6 — typed slash commands and autocomplete
+
+OWCord now supports OW-native option builders (string/integer/boolean/user/channel/role/number/attachment), one-level grouped subcommands, nested handler labels and type-8 Discord autocomplete callbacks. The JVM bridge validates schemas and limits before registering commands; the public OW application API is unchanged by future transport implementations.
+
+Read the [advanced commands guide](docs/ADVANCED-COMMANDS.md) and try [the interactive example](examples/advanced_commands/main.ow). The existing `/ping`, `/hello` and component APIs remain supported.

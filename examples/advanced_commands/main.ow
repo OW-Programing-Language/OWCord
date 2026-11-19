@@ -1,0 +1,50 @@
+# Interactive OWCord v0.6 demonstration: real /search autocomplete and nested subcommands.
+# Requires bot credentials from environment (GitHub Actions secret for live use).
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+import "../../src/commands/CommandOptions.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "advanced demo: flOW boot")
+
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+  set builder: new CommandOptions()
+
+  set search_options: [builder.string_option("query", "Search a sample name", true, true)]
+  call: assert(bot.command_options("search", "Search example names", "search", search_options) == 1)
+  set user_option: builder.user_option("target", "Select a user", true)
+  set show: builder.subcommand("show", "Inspect a user", [user_option])
+  set users: builder.group("users", "User tools", [show])
+  call: assert(bot.command_options("tools", "Demonstrate grouped commands", "tools", [users]) == 1)
+  call: assert(bot.subcommand_handler("tools", "users show", "user_show") == 1)
+  call: assert(bot.sync_dev_commands() == 1, "advanced demo: register slash command schemas")
+
+  print: "OWCORD_ADVANCED_READY: test /search query: and /tools users show target:"
+  while: 1 == 1
+    set event: bot.next(250)
+    if: event.kind == "autocomplete"
+      if: event.name == "search"
+        if: event.focused == "query"
+          set suggestions: [builder.choice("Alpha", "alpha"), builder.choice("Beta", "beta"), builder.choice("Gamma", "gamma")]
+          set status: bot.autocomplete(event, suggestions)
+          print: "ADVANCED_AUTOCOMPLETE_CALLBACK_HTTP " + str(status)
+    else if: event.kind == "command"
+      if: event.handler == "search"
+        set query: bot.option(event, "query", "")
+        set status: bot.reply_private(event, "OWCord search query: " + str(query))
+        print: "ADVANCED_SEARCH_HTTP " + str(status)
+      else if: event.handler == "user_show"
+        set selected: bot.option(event, "target", "")
+        set status: bot.reply_private(event, "Selected user ID: " + str(selected))
+        print: "ADVANCED_SUBCOMMAND_HTTP " + str(status)
+    else if: event.kind == "error"
+      throw: "Advanced example: Gateway returned an error"

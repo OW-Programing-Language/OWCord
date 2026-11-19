@@ -25,6 +25,8 @@ class FakeGateway:
 class FakeRest:
   field registered
   field restricted
+  field options_registered
+  field last_autocomplete
   field last_reply
   field last_defer
   field last_followup
@@ -33,6 +35,8 @@ class FakeRest:
   fn new():
     set this.registered: {}
     set this.restricted: {}
+    set this.options_registered: {}
+    set this.last_autocomplete: ""
     set this.last_reply: ""
     set this.last_defer: 0
     set this.last_followup: ""
@@ -46,6 +50,14 @@ class FakeRest:
   fn register_dev_command_permissions(name, description, permissions):
     call: map_set(this.restricted, name, permissions)
     return: 201
+
+  fn register_dev_command_options(name, description, options_json, permissions):
+    call: map_set(this.options_registered, name, json_parse(options_json))
+    return: 201
+
+  fn autocomplete(id, token, choices_json):
+    set this.last_autocomplete: choices_json
+    return: 204
 
   fn reply(id, token, content):
     set this.last_reply: content
@@ -165,3 +177,20 @@ fn synchronizesRestrictedCommandsWithoutChangingExistingOnes():
   call: assert(bot.sync_dev_commands() == 1)
   call: assert(map_get(rest.registered, "ping", "") == "Public status")
   call: assert(map_get(rest.restricted, "moderate", "") == "8192")
+
+@Test
+fn synchronizesTypedCommandsAndAutocompleteCallbacks():
+  set gateway: new FakeGateway()
+  set rest: new FakeRest()
+  set bot: new OWCordClient(gateway, rest)
+  set opts: [{type: 3, name: "query", description: "Search query", required: true, autocomplete: true}]
+  call: assert(bot.command_options("search", "Search records", "search_handler", opts) == 1)
+  call: assert(bot.command_options_permissions("restricted", "Restricted search", "restricted_handler", opts, "8192") == 1)
+  call: assert(bot.subcommand_handler("search", "find", "find_handler") == 1)
+  call: assert(bot.sync_dev_commands() == 1)
+  call: assert(map_get(rest.options_registered, "search", [])[0].name == "query")
+  call: assert(map_get(rest.options_registered, "restricted", [])[0].autocomplete == true)
+  set event: {id: "1", token: "opaque"}
+  set choices: [{name: "Alpha", value: "alpha"}]
+  call: assert(bot.autocomplete(event, choices) == 204)
+  call: assert(json_parse(rest.last_autocomplete)[0].value == "alpha")

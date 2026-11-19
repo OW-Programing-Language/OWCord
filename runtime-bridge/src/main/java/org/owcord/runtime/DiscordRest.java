@@ -56,6 +56,24 @@ final class DiscordRest {
         check(r);
         return r.statusCode();
     }
+    int registerGuildCommandOptions(String application, String guild, String name,
+                                    String description, String optionsJson, String permissions) {
+        String path = "applications/" + snowflake(application) + "/guilds/" + snowflake(guild) + "/commands";
+        HttpResponse<String> result = request("POST", path,
+            DiscordCommandPayload.command(name, description,
+                permissions.isEmpty() ? null : permissions, optionsJson), true);
+        check(result);
+        return result.statusCode();
+    }
+
+    int replyAutocomplete(String interactionId, String token, String choicesJson) {
+        HttpResponse<String> result = request("POST",
+            "interactions/" + snowflake(interactionId) + "/" + interactionToken(token) + "/callback",
+            DiscordCommandPayload.autocomplete(choicesJson), false);
+        check(result);
+        return result.statusCode();
+    }
+
     int replyInteraction(String id, String interactionToken, String content) {
         return replyInteraction(id, interactionToken, content, false);
     }

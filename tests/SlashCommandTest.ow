@@ -1,0 +1,64 @@
+import "../src/commands/CommandRouter.ow"
+import "../src/commands/CommandOptions.ow"
+import "../src/events/EventParser.ow"
+
+@Test
+fn buildsTypedSchemasWithoutJavaOrDiscord():
+  set builder: new CommandOptions()
+  set query: builder.string_option("query", "Search term", true, true)
+  set silent: builder.boolean_option("silent", "Hide results", false)
+  set opts: [query, silent]
+  set schema: json_parse(json(opts))
+  call: assert(schema[0].type == 3)
+  call: assert(schema[0].autocomplete == true)
+  call: assert(schema[1].type == 5)
+  call: assert(schema[1].required == false)
+  set choice: builder.choice("Blue", "blue")
+  set with_choice: builder.with_choices(builder.string_option("color", "Pick a color", true, false), [choice])
+  call: assert(with_choice.choices[0].value == "blue")
+  set group: builder.group("users", "User tasks", [builder.subcommand("ban", "Ban user", [builder.user_option("target", "Target", true)])])
+  call: assert(group.options[0].options[0].type == 6)
+
+@Test
+fn routesGroupSubcommandsAndResolvesLeafArguments():
+  set router: new CommandRouter()
+  set parser: new EventParser()
+  set builder: new CommandOptions()
+  call: assert(router.add_options("admin", "Admin", "fallback", [builder.group("users", "User actions", [builder.subcommand("ban", "Ban member", [builder.user_option("target", "Target", true)])])]) == 1)
+  call: assert(router.route("admin", "users ban", "ban_handler") == 1)
+  call: assert(router.route("admin", "users ban", "duplicate") == 0)
+  call: assert(router.route("unknown", "users ban", "bad") == 0)
+  set event: router.dispatch(parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"id\":\"1\",\"token\":\"opaque\",\"type\":2,\"data\":{\"name\":\"admin\",\"options\":[{\"name\":\"users\",\"type\":2,\"options\":[{\"name\":\"ban\",\"type\":1,\"options\":[{\"name\":\"target\",\"type\":6,\"value\":\"123\"},{\"name\":\"reason\",\"type\":3,\"value\":\"spam\"}]}]}]}}}"))
+  call: assert(event.kind == "command")
+  call: assert(event.path == "users ban")
+  call: assert(event.group == "users")
+  call: assert(event.subcommand == "ban")
+  call: assert(event.handler == "ban_handler")
+  call: assert(parser.option(event, "target", "") == "123")
+  call: assert(parser.option(event, "reason", "") == "spam")
+  call: assert(parser.option(event, "other", "fallback") == "fallback")
+
+@Test
+fn routesAutocompleteAndReadsFocusedValue():
+  set router: new CommandRouter()
+  set parser: new EventParser()
+  call: assert(router.add("search", "Search", "search_handler") == 1)
+  set event: router.dispatch(parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"id\":\"2\",\"token\":\"opaque\",\"type\":4,\"data\":{\"name\":\"search\",\"options\":[{\"name\":\"query\",\"type\":3,\"value\":\"mou\",\"focused\":true}]}}}"))
+  call: assert(event.kind == "autocomplete")
+  call: assert(event.handler == "search_handler")
+  call: assert(event.focused == "query")
+  call: assert(event.focused_value == "mou")
+  call: assert(parser.option(event, "query", "") == "mou")
+
+@Test
+fn handlesUngroupedSubcommands():
+  set router: new CommandRouter()
+  set parser: new EventParser()
+  call: assert(router.add("lookup", "Look up", "fallback") == 1)
+  call: assert(router.route("lookup", "find", "find_handler") == 1)
+  set event: router.dispatch(parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"id\":\"3\",\"token\":\"opaque\",\"type\":2,\"data\":{\"name\":\"lookup\",\"options\":[{\"name\":\"find\",\"type\":1,\"options\":[{\"name\":\"id\",\"type\":4,\"value\":42}]}]}}}"))
+  call: assert(event.path == "find")
+  call: assert(event.group == "")
+  call: assert(event.subcommand == "find")
+  call: assert(event.handler == "find_handler")
+  call: assert(parser.option(event, "id", 0) == 42)
