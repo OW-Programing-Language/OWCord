@@ -41,7 +41,7 @@ final class DiscordRateLimiter {
 
     synchronized long waitNanos(String route, String major, boolean authorized, long now) {
         long global = authorized ? globalUntil : 0;
-        long byRoute = blockedUntil.getOrDefault("route:" + route, 0L);
+        long byRoute = blockedUntil.getOrDefault("route:" + route + ":" + major, 0L);
         String sharedBucket = bucketByRoute.get(route);
         if (sharedBucket != null) {
             byRoute = Math.max(byRoute, blockedUntil.getOrDefault("bucket:" + sharedBucket + ":" + major, 0L));
@@ -79,7 +79,7 @@ final class DiscordRateLimiter {
         String key = shared == null ? "route:" + route : "bucket:" + shared + ":" + major;
         blockedUntil.merge(key, until, Math::max);
         // Preserve route-scoped waits when Discord reveals/changes bucket IDs later.
-        blockedUntil.merge("route:" + route, until, Math::max);
+        blockedUntil.merge("route:" + route + ":" + major, until, Math::max);
     }
 
     private static long deadline(long now, double seconds) {
