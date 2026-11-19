@@ -17,6 +17,7 @@ final class DiscordRest {
     private final String token;
     private final URI base;
     private final HttpClient http;
+    private final DiscordRateLimiter limits = new DiscordRateLimiter();
 
     DiscordRest(String token) {
         this(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build(), API, token);
@@ -157,37 +158,51 @@ final class DiscordRest {
         return content;
     }
 
-    private HttpResponse<String> request(String method, String path, String json, boolean auth) {
+    /**
+     * Serializing calls protects rate-limit observations within one OWCord
+     * interpreter. This is bounded (at most three HTTP attempts) and never
+     * blindly retries IO failures or ambiguous 5xx POST results.
+     */
+    private synchronized HttpResponse<String> request(String method, String path, String json, boolean auth) {
         HttpRequest.Builder b = HttpRequest.newBuilder(base.resolve(path))
             .timeout(Duration.ofSeconds(12))
             .header("Accept", "application/json")
-            .header("User-Agent", "OWCord/0.1 (https://github.com/OW-Programing-Language/OWCord)");
+            .header("User-Agent", "OWCord/0.4 (https://github.com/OW-Programing-Language/OWCord)");
         if (auth) b.header("Authorization", "Bot " + token);
         if ("POST".equals(method)) b.header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
         else b.GET();
-        HttpRequest r = b.build();
+        HttpRequest request = b.build();
+
+        String route = DiscordRateLimiter.routeKey(method, path);
+        String major = DiscordRateLimiter.majorResource(path);
+        long start = System.nanoTime();
+        // Interaction callbacks must be acknowledged in 3 seconds. Don't sleep
+        // through that deadline waiting for a bucket to open.
+        long maxWait = path.startsWith("interactions/") ? 2_000_000_000L : 8_000_000_000L;
         try {
-            HttpResponse<String> out = http.send(r, HttpResponse.BodyHandlers.ofString());
-            if (out.statusCode() == 429) {
-                double seconds = out.headers().firstValue("Retry-After").map(DiscordRest::seconds).orElse(1d);
-                if (seconds > 3) throw new IllegalStateException("Discord rate limit exceeds 3 seconds");
-                Thread.sleep((long) Math.ceil(Math.max(0.1, seconds) * 1000));
-                out = http.send(r, HttpResponse.BodyHandlers.ofString());
+            for (int attempt = 0; attempt < 3; attempt++) {
+                long now = System.nanoTime();
+                long delay = limits.waitNanos(route, major, auth, now);
+                if (delay > 0) {
+                    if (delay > maxWait - (now - start))
+                        throw new IllegalStateException("Discord rate-limit wait exceeds request budget");
+                    java.util.concurrent.TimeUnit.NANOSECONDS.sleep(delay);
+                }
+
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+                limits.observe(route, major, auth, response, System.nanoTime());
+                if (response.statusCode() != 429) return response;
+                if (attempt == 2) throw new IllegalStateException("Discord rate limit persisted after three attempts");
             }
-            return out;
+            throw new IllegalStateException("Discord retry limit exceeded");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Discord request interrupted");
+            throw new IllegalStateException("Discord request interrupted", e);
         } catch (IOException e) {
-            throw new IllegalStateException("Discord request failed", e);
+            // A POST may already have been processed remotely: avoid duplication.
+            throw new IllegalStateException("Discord request failed without retry", e);
         }
-    }
-    private static double seconds(String s) {
-        try {
-            double x = Double.parseDouble(s);
-            return Double.isFinite(x) && x >= 0 ? x : 1;
-        } catch (NumberFormatException e) { return 1; }
     }
     private static void check(HttpResponse<String> r) {
         if (r.statusCode() < 200 || r.statusCode() >= 300)
