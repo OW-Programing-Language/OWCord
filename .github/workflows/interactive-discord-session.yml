@@ -1,0 +1,59 @@
+name: OWCord interactive Discord session
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/v0.2-command-router-events]
+    paths:
+      - '.github/workflows/interactive-discord-session.yml'
+permissions:
+  contents: read
+concurrency:
+  group: owcord-interactive-session
+  cancel-in-progress: false
+jobs:
+  discord-interactive:
+    name: Host bot for human slash-command testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_APPLICATION_ID: '1572864462447181954'
+      DISCORD_GUILD_ID: '1321509685031075911'
+      OWCORD_GATEWAY_INTENTS: '513'
+    steps:
+      - name: Require preconfigured secret
+        shell: bash
+        run: |
+          if [[ -z "${DISCORD_BOT_TOKEN}" ]]; then
+            echo '::error::DISCORD_BOT_TOKEN Actions secret is missing'
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - name: Checkout OW
+        uses: actions/checkout@v4
+        with:
+          repository: OW-Programing-Language/ow-lang
+          path: ow-lang
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build OW and runtime
+        run: |
+          mvn -B -ntp -f ow-lang/pom.xml -DskipTests install
+          mvn -B -ntp -f runtime-bridge/pom.xml verify
+      - name: Install flOW and check interactive OW example
+        run: |
+          java -jar ow-lang/target/OwIDE.jar deps install
+          java -jar ow-lang/target/OwIDE.jar check examples/interactive_session/main.ow
+      - name: HOST BOT — look for OWCORD_INTERACTIVE_READY before clicking commands
+        shell: bash
+        run: |
+          set +e
+          timeout -s TERM 900s java -cp "ow-lang/target/OwIDE.jar:runtime-bridge/target/owcord-runtime-0.1.0-SNAPSHOT.jar" dev.oreo.Main run examples/interactive_session/main.ow
+          code=$?
+          if [[ "$code" -eq 124 ]]; then
+            echo 'OWCORD_INTERACTIVE_SESSION_EXPIRED: 15-minute live test window has ended'
+            exit 0
+          fi
+          exit "$code"
