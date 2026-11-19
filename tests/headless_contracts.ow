@@ -44,6 +44,14 @@ module OWCord.MockRest: DISCORD_REST
     return: 204
   fn send_message(channel_id string, content string) -> int:
     return: 200
+  fn reply_ephemeral(interaction_id string, interaction_token string, content string) -> int:
+    return: 204
+  fn defer(interaction_id string, interaction_token string, private int) -> int:
+    return: 204
+  fn followup(interaction_token string, content string) -> int:
+    return: 200
+  fn followup_ephemeral(interaction_token string, content string) -> int:
+    return: 200
 
 main:
   set app: new App()

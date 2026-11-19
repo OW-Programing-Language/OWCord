@@ -1,0 +1,61 @@
+# Convenient OW SDK facade; transport and lifecycle remain flOW managed.
+import "../events/EventParser.ow"
+import "../commands/CommandRouter.ow"
+
+class OWCordClient:
+  field gateway
+  field rest
+  field parser
+  field router
+
+  fn new(gateway, rest):
+    set this.gateway: gateway
+    set this.rest: rest
+    set this.parser: new EventParser()
+    set this.router: new CommandRouter()
+    return: 0
+
+  fn command(name, description, handler):
+    return: this.router.add(name, description, handler)
+
+  fn command_count():
+    return: this.router.count()
+
+  # Registers without overwriting unrelated guild commands.
+  # Discord returns 200 when updating an existing command and 201 on create.
+  fn sync_dev_commands():
+    set names: this.router.names()
+    set i: 0
+    while: i < len(names)
+      set name: names[i]
+      set status: this.rest.register_dev_command(name, this.router.description(name))
+      if: status != 200
+        if: status != 201
+          return: 0
+      set i: i + 1
+    return: 1
+
+  fn next(timeout_ms):
+    set event: this.parser.decode(this.gateway.poll(timeout_ms))
+    return: this.router.dispatch(event)
+
+  fn option(event, name, fallback):
+    return: this.parser.option(event, name, fallback)
+
+  fn reply(event, content):
+    return: this.rest.reply(event.id, event.token, content)
+
+  fn reply_private(event, content):
+    return: this.rest.reply_ephemeral(event.id, event.token, content)
+
+  fn defer(event, private):
+    return: this.rest.defer(event.id, event.token, private)
+
+  fn followup(event, content):
+    return: this.rest.followup(event.token, content)
+
+  fn followup_private(event, content):
+    return: this.rest.followup_ephemeral(event.token, content)
+
+  fn send_message(channel_id, content):
+    return: this.rest.send_message(channel_id, content)

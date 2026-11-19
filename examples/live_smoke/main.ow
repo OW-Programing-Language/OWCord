@@ -1,62 +1,76 @@
-# Real Discord smoke test. Intentionally posts one message in a designated test channel.
+# Live Discord integration test for the v0.2 OW-native command router and event parser.
+# Uses a real bot token from the GitHub Actions secret, never from source code.
+# Creates/updates two slash commands and sends one marked message to a test channel.
 # Requires DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID, DISCORD_GUILD_ID,
-# DISCORD_TEST_CHANNEL_ID and OWCORD_GATEWAY_INTENTS=513 (GUILDS + GUILD_MESSAGES).
+# DISCORD_TEST_CHANNEL_ID and OWCORD_GATEWAY_INTENTS=513.
 import "@flow/src/App.ow"
 import "../../src/gateway/api/GatewayApi.ow"
 import "../../src/gateway/infra/JvmGateway.ow"
 import "../../src/rest/api/RestApi.ow"
 import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
 
 main:
   set app: new App()
   call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
   call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
-  call: assert(app.boot() == 1, "live smoke: boot")
+  call: assert(app.boot() == 1, "live v0.2: flOW boot")
 
   set gateway DISCORD_GATEWAY: app.service("gateway")
   set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+
+  call: assert(bot.command("ping", "Replies with Pong from OW", "ping_handler") == 1, "live v0.2: add ping")
+  call: assert(bot.command("hello", "Say hello in private", "hello_handler") == 1, "live v0.2: add hello")
+  call: assert(bot.command("ping", "Duplicate", "other_handler") == 0, "live v0.2: reject duplicate")
+  call: assert(bot.command_count() == 2, "live v0.2: registry count")
+  print: "LIVE PASS: flOW lifecycle and OW command router"
 
   set ready: 0
   set attempts: 0
   while: attempts < 60
-    set event: json_parse(gateway.poll(1000))
-    if: event.type == "READY"
+    set event: bot.next(1000)
+    if: event.kind == "ready"
       set ready: 1
       set attempts: 60
-    else if: event.type == "ERROR"
-      throw: "live smoke: Gateway rejected credentials or intents"
+    else if: event.kind == "error"
+      throw: "live v0.2: Discord Gateway error before READY"
     else:
       set attempts: attempts + 1
-  call: assert(ready == 1, "live smoke: READY timeout")
-  print: "LIVE PASS: Discord Gateway READY"
+  call: assert(ready == 1, "live v0.2: READY timeout")
+  call: assert(gateway.connected() == 1, "live v0.2: active connection")
+  print: "LIVE PASS: Discord Gateway READY parsed by OW EventParser"
 
-  set registered: rest.register_dev_command("ping", "Replies with Pong from OW")
-  if: registered != 200
-    call: assert(registered == 201, "live smoke: register /ping")
-  print: "LIVE PASS: /ping registered in development guild"
+  call: assert(bot.sync_dev_commands() == 1, "live v0.2: register /ping and /hello")
+  print: "LIVE PASS: OW CommandRouter registered /ping and /hello via Discord REST"
 
   set channel: extension("owcord.test.channel_id")
-  set marker: "OWCord live smoke " + str(time_ms())
-  set sent: rest.send_message(channel, marker)
+  set marker: "OWCord v0.2 live smoke " + str(time_ms())
+  set sent: bot.send_message(channel, marker)
   if: sent != 200
-    call: assert(sent == 201, "live smoke: REST message send")
-  print: "LIVE PASS: Discord REST message created"
+    call: assert(sent == 201, "live v0.2: send test message")
+  print: "LIVE PASS: Discord REST accepted a real message"
 
   set received: 0
   set attempts: 0
   while: attempts < 60
-    set event: json_parse(gateway.poll(1000))
-    if: event.type == "MESSAGE_CREATE"
-      if: event.data.content == marker
+    set event: bot.next(1000)
+    if: event.kind == "message"
+      if: event.content == marker
+        call: assert(event.channel_id == channel, "live v0.2: channel id")
+        call: assert(event.id != "", "live v0.2: message snowflake id")
+        call: assert(event.user_id != "", "live v0.2: author id")
         set received: 1
         set attempts: 60
       else:
         set attempts: attempts + 1
-    else if: event.type == "ERROR"
-      throw: "live smoke: Gateway disconnected"
+    else if: event.kind == "error"
+      throw: "live v0.2: Gateway error while waiting for message"
     else:
       set attempts: attempts + 1
-  call: assert(received == 1, "live smoke: MESSAGE_CREATE not received")
-  print: "LIVE PASS: matching MESSAGE_CREATE received via Gateway"
-  call: assert(app.stop() == 1, "live smoke: disconnect")
-  print: "LIVE SMOKE COMPLETE: Discord authentication, Gateway, REST and event delivery"
+  call: assert(received == 1, "live v0.2: matching MESSAGE_CREATE not received")
+  print: "LIVE PASS: real MESSAGE_CREATE normalized with channel, author and message IDs"
+
+  call: assert(app.stop() == 1, "live v0.2: disconnect")
+  print: "LIVE PASS: clean flOW shutdown"
+  print: "LIVE V0.2 COMPLETE: real Discord Gateway, OW event parsing, command registration and message delivery"

@@ -1,0 +1,62 @@
+import "../src/events/EventParser.ow"
+import "../src/commands/CommandRouter.ow"
+import "../src/client/OWCordClient.ow"
+
+@Test
+fn recognizesAndDispatchesSlashCommands():
+  set parser: new EventParser()
+  set router: new CommandRouter()
+  call: assert(router.add("ping", "Latency", "ping_handler") == 1)
+  call: assert(router.add("ping", "Duplicate", "second_handler") == 0)
+  call: assert(router.add("hello", "Greeting", "hello_handler") == 1)
+  call: assert(router.count() == 2)
+  set event: parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"type\":2,\"id\":\"111\",\"token\":\"opaque\",\"guild_id\":\"222\",\"channel_id\":\"333\",\"data\":{\"name\":\"ping\",\"options\":[{\"name\":\"target\",\"type\":3,\"value\":\"OW\"}]},\"member\":{\"user\":{\"id\":\"444\"}}}}")
+  set dispatched: router.dispatch(event)
+  call: assert(dispatched.kind == "command")
+  call: assert(dispatched.name == "ping")
+  call: assert(dispatched.handler == "ping_handler")
+  call: assert(dispatched.id == "111")
+  call: assert(dispatched.user_id == "444")
+  call: assert(parser.option(dispatched, "target", "") == "OW")
+  call: assert(parser.option(dispatched, "unknown", "fallback") == "fallback")
+
+@Test
+fn handlesUnknownCommandsWithoutInvokingAnything():
+  set parser: new EventParser()
+  set router: new CommandRouter()
+  call: assert(router.add("ping", "Latency", "ping_handler") == 1)
+  set event: router.dispatch(parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"type\":2,\"id\":\"11\",\"token\":\"opaque\",\"data\":{\"name\":\"destroy\"}}}"))
+  call: assert(event.kind == "command")
+  call: assert(event.handler == "")
+  call: assert(event.name == "destroy")
+
+@Test
+fn differentiatesMessagesComponentsAndUnknownEvents():
+  set parser: new EventParser()
+  set message: parser.decode("{\"type\":\"MESSAGE_CREATE\",\"data\":{\"id\":\"1\",\"content\":\"hi\",\"channel_id\":\"2\",\"author\":{\"id\":\"3\"}}}")
+  call: assert(message.kind == "message")
+  call: assert(message.content == "hi")
+  call: assert(message.user_id == "3")
+  set component: parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"type\":3,\"id\":\"4\",\"data\":{\"custom_id\":\"next_page\"}}}")
+  call: assert(component.kind == "component")
+  call: assert(component.custom_id == "next_page")
+  set ready: parser.decode("{\"type\":\"READY\",\"data\":{}}")
+  call: assert(ready.kind == "ready")
+  set idle: parser.decode("{\"type\":\"NONE\",\"data\":{}}")
+  call: assert(idle.kind == "none")
+  set other: parser.decode("{\"type\":\"GUILD_CREATE\",\"data\":{}}")
+  call: assert(other.kind == "other")
+  call: assert(other.name == "GUILD_CREATE")
+
+@Test
+fn rejectsInvalidRegistrationsAndKeepsInsertionOrder():
+  set router: new CommandRouter()
+  call: assert(router.add("", "desc", "handler") == 0)
+  call: assert(router.add("name", "", "handler") == 0)
+  call: assert(router.add("name", "desc", "") == 0)
+  call: assert(router.add("b", "second", "b_handler") == 1)
+  call: assert(router.add("a", "first", "a_handler") == 1)
+  set names: router.names()
+  call: assert(len(names) == 2)
+  call: assert(names[0] == "b")
+  call: assert(names[1] == "a")

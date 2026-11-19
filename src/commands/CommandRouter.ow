@@ -1,0 +1,41 @@
+# Deterministic command registry and handler-name dispatch in pure OW.
+# Handler names are labels, not dynamically invoked code: user logic chooses them.
+class CommandRouter:
+  field handlers
+  field descriptions
+
+  fn new():
+    set this.handlers: {}
+    set this.descriptions: {}
+    return: 0
+
+  fn add(name, description, handler):
+    if: name == ""
+      return: 0
+    if: description == ""
+      return: 0
+    if: handler == ""
+      return: 0
+    if: map_has(this.handlers, name)
+      return: 0
+    if: map_size(this.handlers) >= 32
+      return: 0
+    call: map_set(this.handlers, name, handler)
+    call: map_set(this.descriptions, name, description)
+    return: 1
+
+  fn names():
+    return: map_keys(this.handlers)
+
+  fn count():
+    return: map_size(this.handlers)
+
+  fn description(name):
+    return: map_get(this.descriptions, name, "")
+
+  fn dispatch(event):
+    if: event.kind != "command"
+      return: event
+    set handler: map_get(this.handlers, event.name, "")
+    call: map_set(event, "handler", handler)
+    return: event

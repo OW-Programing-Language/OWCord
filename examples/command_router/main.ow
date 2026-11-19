@@ -1,0 +1,32 @@
+# OWCord v0.2 example: register two commands, route by handler labels.
+# Set DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID and DISCORD_GUILD_ID.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "OWCord boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+
+  call: assert(bot.command("ping", "Check if the bot is online", "ping_handler") == 1)
+  call: assert(bot.command("hello", "Get a private greeting", "hello_handler") == 1)
+  call: assert(bot.sync_dev_commands() == 1, "register Discord commands")
+  print: "OWCord v0.2: /ping and /hello ready"
+
+  while: 1 == 1
+    set event: bot.next(250)
+    if: event.kind == "command"
+      if: event.handler == "ping_handler"
+        call: bot.reply(event, "Pong from OWCord v0.2!")
+      else if: event.handler == "hello_handler"
+        call: bot.reply_private(event, "Hello from OW! Only you can see this.")
+    else if: event.kind == "ready"
+      print: "OWCord Gateway READY"
