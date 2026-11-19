@@ -1,0 +1,36 @@
+# Pure-OW builders for Discord v0.3 rich messages and interactive components.
+# Validated/sanitized again by the runtime bridge before being sent to Discord.
+class DiscordUI:
+  fn new():
+    return: 0
+
+  fn message(content, embeds, components):
+    return: json({content: content, embeds: embeds, components: components})
+
+  fn embed(title, description, color):
+    return: {title: title, description: description, color: color}
+
+  fn row(components):
+    return: {type: 1, components: components}
+
+  # style 1=primary, 2=secondary, 3=success, 4=danger.
+  fn button(id, label, style):
+    return: {type: 2, custom_id: id, label: label, style: style}
+
+  fn option(label, value, description):
+    return: {label: label, value: value, description: description}
+
+  # A single-choice string select, placed alone in its action row.
+  fn select(id, placeholder, options):
+    return: {type: 3, custom_id: id, placeholder: placeholder, options: options}
+
+  # Discord modal callback with Label (type 18) wrappers.
+  fn modal(id, title, labels):
+    return: json({custom_id: id, title: title, components: labels})
+
+  fn label(text, component):
+    return: {type: 18, label: text, component: component}
+
+  # style 1=short, 2=paragraph. Required is a boolean.
+  fn text_input(id, placeholder, style, required):
+    return: {type: 4, custom_id: id, placeholder: placeholder, style: style, required: required}

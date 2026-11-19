@@ -27,3 +27,13 @@ module OWCord.JvmRest: DISCORD_REST
     return: extension("owcord.rest.followup", interaction_token, content)
   fn followup_ephemeral(interaction_token string, content string) -> int:
     return: extension("owcord.rest.followup_private", interaction_token, content)
+  fn send_rich(channel_id string, message_json string) -> int:
+    return: extension("owcord.rest.send_rich", channel_id, message_json)
+  fn reply_rich(interaction_id string, interaction_token string, message_json string) -> int:
+    return: extension("owcord.rest.reply_rich", interaction_id, interaction_token, message_json)
+  fn reply_rich_private(interaction_id string, interaction_token string, message_json string) -> int:
+    return: extension("owcord.rest.reply_rich_private", interaction_id, interaction_token, message_json)
+  fn update_component(interaction_id string, interaction_token string, message_json string) -> int:
+    return: extension("owcord.rest.update_component", interaction_id, interaction_token, message_json)
+  fn open_modal(interaction_id string, interaction_token string, modal_json string) -> int:
+    return: extension("owcord.rest.open_modal", interaction_id, interaction_token, modal_json)
