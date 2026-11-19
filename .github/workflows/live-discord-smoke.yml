@@ -1,5 +1,8 @@
 name: OWCord live Discord smoke test
 on:
+  push:
+    branches:
+      - feat/owcord-gateway-rest-foundation
   workflow_dispatch:
     inputs:
       application_id:
