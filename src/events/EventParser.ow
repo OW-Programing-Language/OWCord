@@ -1,0 +1,67 @@
+# Interpreter-side typed event normalization.
+# No bot secrets are persisted or logged here.
+class EventParser:
+  fn new():
+    return: 0
+
+  fn decode(raw):
+    set envelope: json_parse(raw)
+    set event_type: map_get(envelope, "type", "NONE")
+    set data: map_get(envelope, "data", {})
+    set event: {kind: "other", name: "", handler: "", id: "", token: "", guild_id: "", channel_id: "", user_id: "", custom_id: "", content: "", options: [], payload: data}
+
+    if: event_type == "NONE"
+      call: map_set(event, "kind", "none")
+      return: event
+    if: event_type == "READY"
+      call: map_set(event, "kind", "ready")
+      return: event
+    if: event_type == "ERROR"
+      call: map_set(event, "kind", "error")
+      return: event
+    if: event_type == "MESSAGE_CREATE"
+      call: map_set(event, "kind", "message")
+      call: map_set(event, "id", map_get(data, "id", ""))
+      call: map_set(event, "content", map_get(data, "content", ""))
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      call: map_set(event, "channel_id", map_get(data, "channel_id", ""))
+      set author: map_get(data, "author", {})
+      call: map_set(event, "user_id", map_get(author, "id", ""))
+      return: event
+
+    if: event_type == "INTERACTION_CREATE"
+      call: map_set(event, "id", map_get(data, "id", ""))
+      call: map_set(event, "token", map_get(data, "token", ""))
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      call: map_set(event, "channel_id", map_get(data, "channel_id", ""))
+      set member: map_get(data, "member", {})
+      set user: map_get(member, "user", {})
+      if: map_get(user, "id", "") == ""
+        set user: map_get(data, "user", {})
+      call: map_set(event, "user_id", map_get(user, "id", ""))
+      set interaction_data: map_get(data, "data", {})
+      set interaction_type: map_get(data, "type", 0)
+      if: interaction_type == 2
+        call: map_set(event, "kind", "command")
+        call: map_set(event, "name", map_get(interaction_data, "name", ""))
+        call: map_set(event, "options", map_get(interaction_data, "options", []))
+      else if: interaction_type == 3
+        call: map_set(event, "kind", "component")
+        call: map_set(event, "custom_id", map_get(interaction_data, "custom_id", ""))
+      else:
+        call: map_set(event, "kind", "interaction")
+      return: event
+
+    call: map_set(event, "name", event_type)
+    return: event
+
+  # Slash command option helper for simple, top-level options.
+  fn option(event, name, fallback):
+    set options: map_get(event, "options", [])
+    set i: 0
+    while: i < len(options)
+      set option: options[i]
+      if: map_get(option, "name", "") == name
+        return: map_get(option, "value", fallback)
+      set i: i + 1
+    return: fallback
