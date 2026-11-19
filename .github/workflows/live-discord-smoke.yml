@@ -17,6 +17,16 @@ on:
         required: true
         type: string
         default: '1459838511485157481'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'runtime-bridge/**'
+      - 'examples/**'
+      - 'tests/**'
+      - 'dependencies.yml'
+      - 'dependencies.lock.yml'
+      - '.github/workflows/live-discord-smoke.yml'
 permissions:
   contents: read
 concurrency:
