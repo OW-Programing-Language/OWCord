@@ -1,0 +1,37 @@
+import "../src/components/DiscordUI.ow"
+import "../src/events/EventParser.ow"
+
+@Test
+fn createsTypedEmbedsButtonsAndSelects():
+  set ui: new DiscordUI()
+  set embed: ui.embed("OWCord", "Rich messages", 16711680)
+  set button: ui.button("owcord_button", "Click", 1)
+  set menu: ui.select("owcord_select", "Choose", [ui.option("Alpha", "a", "First")])
+  set message: json_parse(ui.message("Hello", [embed], [ui.row([button]), ui.row([menu])]))
+  call: assert(message.content == "Hello")
+  call: assert(message.embeds[0].color == 16711680)
+  call: assert(message.components[0].components[0].custom_id == "owcord_button")
+  call: assert(message.components[1].components[0].options[0].value == "a")
+
+@Test
+fn buildsModernModalLabels():
+  set ui: new DiscordUI()
+  set field: ui.label("Feedback", ui.text_input("feedback", "Write here", 2, true))
+  set modal: json_parse(ui.modal("owcord_modal", "Feedback form", [field]))
+  call: assert(modal.custom_id == "owcord_modal")
+  call: assert(modal.components[0].type == 18)
+  call: assert(modal.components[0].component.custom_id == "feedback")
+  call: assert(modal.components[0].component.required == true)
+
+@Test
+fn parsesComponentValuesAndModalSubmissions():
+  set parser: new EventParser()
+  set select_event: parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"type\":3,\"id\":\"1\",\"token\":\"test\",\"data\":{\"custom_id\":\"colors\",\"values\":[\"blue\"]}}}")
+  call: assert(select_event.kind == "component")
+  call: assert(select_event.custom_id == "colors")
+  call: assert(select_event.values[0] == "blue")
+  set modal_event: parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"type\":5,\"id\":\"2\",\"token\":\"test\",\"data\":{\"custom_id\":\"feedback_form\",\"components\":[{\"type\":18,\"component\":{\"type\":4,\"custom_id\":\"feedback\",\"value\":\"Great!\"}}]}}}")
+  call: assert(modal_event.kind == "modal")
+  call: assert(modal_event.custom_id == "feedback_form")
+  call: assert(parser.modal_value(modal_event, "feedback", "") == "Great!")
+  call: assert(parser.modal_value(modal_event, "missing", "default") == "default")

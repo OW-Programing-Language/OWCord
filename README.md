@@ -88,3 +88,19 @@ See [commands guide](docs/COMMANDS.md) and [runnable two-command example](exampl
 - Run offline OW tests: `ow test tests/CommandRouterTest.ow`; Java transport tests run through `mvn -f runtime-bridge/pom.xml verify`.
 
 This API dispatches **handler labels**, not arbitrary function callbacks. The example explicitly routes handler names into OW functions/logic. Live tests run on trusted main-branch changes and manual dispatches, but not on ordinary pull requests.
+
+## v0.3 — Rich Discord UI (PR #3)
+
+OWCord now provides pure-OW builders for embedded messages, clickable buttons,
+single-choice string selects and modern Discord modal text inputs via
+`src/components/DiscordUI.ow`. The OW `OWCordClient` adds
+`send_rich`, `reply_rich`, `reply_rich_private`, `update_message`,
+`show_modal` and `modal_value`. The Java bridge validates every supported
+payload and disables mass-mention parsing.
+
+Start with [the components guide](docs/COMPONENTS.md) and
+[real bot demo](examples/components_demo/main.ow). Java transport tests,
+OWUnit tests and the CI type check cover the initial implementation.
+Real clicks and modal submissions need a Discord-user interaction test
+before claiming complete live validation; the existing secret is held in
+GitHub Actions and not in this repository's source.

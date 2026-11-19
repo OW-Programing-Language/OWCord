@@ -9,6 +9,7 @@ import "../../src/gateway/infra/JvmGateway.ow"
 import "../../src/rest/api/RestApi.ow"
 import "../../src/rest/infra/JvmRest.ow"
 import "../../src/client/OWCordClient.ow"
+import "../../src/components/DiscordUI.ow"
 
 main:
   set app: new App()
@@ -70,6 +71,38 @@ main:
       set attempts: attempts + 1
   call: assert(received == 1, "live v0.2: matching MESSAGE_CREATE not received")
   print: "LIVE PASS: real MESSAGE_CREATE normalized with channel, author and message IDs"
+
+  # v0.3 real Discord message with OW embed + interactive components.
+  set ui: new DiscordUI()
+  set rich_marker: "OWCord v0.3 rich smoke " + str(time_ms())
+  set embed: ui.embed("OWCord rich smoke", "Embeds and components from native OW source", 5793266)
+  set buttons: ui.row([ui.button("owcord_smoke_button", "Click to test", 1)])
+  set select: ui.row([ui.select("owcord_smoke_select", "Select a color", [ui.option("Blue", "blue", "Option A"), ui.option("Green", "green", "Option B")])])
+  set rich_status: bot.send_rich(channel, ui.message(rich_marker, [embed], [buttons, select]))
+  if: rich_status != 200
+    call: assert(rich_status == 201, "live v0.3: send rich Discord message")
+  print: "LIVE PASS: Discord REST accepted rich message with embed, button and string select"
+
+  set received_rich: 0
+  set attempts: 0
+  while: attempts < 60
+    set event: bot.next(1000)
+    if: event.kind == "message"
+      if: event.content == rich_marker
+        set received_embeds: map_get(event.payload, "embeds", [])
+        set received_components: map_get(event.payload, "components", [])
+        call: assert(len(received_embeds) == 1, "live v0.3: embed delivered")
+        call: assert(len(received_components) == 2, "live v0.3: components delivered")
+        set received_rich: 1
+        set attempts: 60
+      else:
+        set attempts: attempts + 1
+    else if: event.kind == "error"
+      throw: "live v0.3: Gateway disconnected before rich message"
+    else:
+      set attempts: attempts + 1
+  call: assert(received_rich == 1, "live v0.3: missing rich Gateway event")
+  print: "LIVE PASS: Discord Gateway confirmed rich embed, button and select in MESSAGE_CREATE"
 
   call: assert(app.stop() == 1, "live v0.2: disconnect")
   print: "LIVE PASS: clean flOW shutdown"

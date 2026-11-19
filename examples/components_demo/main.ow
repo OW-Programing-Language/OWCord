@@ -1,0 +1,52 @@
+# Real Discord demo for OW-native embeds, buttons, menus and modals.
+# Run with the existing OWCord secret via the interactive GitHub Actions workflow.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+import "../../src/components/DiscordUI.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "components: boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+  set ui: new DiscordUI()
+
+  call: assert(bot.command("components", "Show OWCord buttons, select menus and modals", "components") == 1)
+  call: assert(bot.sync_dev_commands() == 1, "components: register")
+  print: "OWCORD_COMPONENTS_SESSION: waiting for Gateway READY"
+  while: 1 == 1
+    set event: bot.next(250)
+    if: event.kind == "ready"
+      print: "OWCORD_COMPONENTS_READY: use /components in the development guild"
+    else if: event.kind == "command"
+      if: event.handler == "components"
+        set embed: ui.embed("OWCord UI v0.3", "Try the button or select a value below.", 5793266)
+        set button_row: ui.row([ui.button("owcord_feedback_button", "Send feedback", 1)])
+        set menu_row: ui.row([ui.select("owcord_color_select", "Choose a color", [ui.option("Blue", "blue", "Sky blue"), ui.option("Green", "green", "Forest green")])])
+        set result: bot.reply_rich(event, ui.message("", [embed], [button_row, menu_row]))
+        print: "COMPONENTS /components response HTTP " + str(result)
+    else if: event.kind == "component"
+      if: event.custom_id == "owcord_feedback_button"
+        set field: ui.label("Your feedback", ui.text_input("feedback", "Tell us what works", 2, true))
+        set result: bot.show_modal(event, ui.modal("owcord_feedback_modal", "OWCord Feedback", [field]))
+        print: "COMPONENTS button modal HTTP " + str(result)
+      else if: event.custom_id == "owcord_color_select"
+        set selected: "nothing"
+        if: len(event.values) > 0
+          set selected: event.values[0]
+        set result: bot.update_message(event, ui.message("You selected: " + selected, [], []))
+        print: "COMPONENTS select update HTTP " + str(result)
+    else if: event.kind == "modal"
+      if: event.custom_id == "owcord_feedback_modal"
+        set value: bot.modal_value(event, "feedback", "")
+        set result: bot.reply_private(event, "Thank you! Your feedback was received (" + str(len(value)) + " characters).")
+        print: "COMPONENTS modal submit HTTP " + str(result)
+    else if: event.kind == "error"
+      throw: "components: Gateway error"

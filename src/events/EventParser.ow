@@ -8,7 +8,7 @@ class EventParser:
     set envelope: json_parse(raw)
     set event_type: map_get(envelope, "type", "NONE")
     set data: map_get(envelope, "data", {})
-    set event: {kind: "other", name: "", handler: "", id: "", token: "", guild_id: "", channel_id: "", user_id: "", custom_id: "", content: "", options: [], payload: data}
+    set event: {kind: "other", name: "", handler: "", id: "", token: "", guild_id: "", channel_id: "", user_id: "", custom_id: "", content: "", options: [], values: [], fields: [], payload: data}
 
     if: event_type == "NONE"
       call: map_set(event, "kind", "none")
@@ -48,6 +48,11 @@ class EventParser:
       else if: interaction_type == 3
         call: map_set(event, "kind", "component")
         call: map_set(event, "custom_id", map_get(interaction_data, "custom_id", ""))
+        call: map_set(event, "values", map_get(interaction_data, "values", []))
+      else if: interaction_type == 5
+        call: map_set(event, "kind", "modal")
+        call: map_set(event, "custom_id", map_get(interaction_data, "custom_id", ""))
+        call: map_set(event, "fields", map_get(interaction_data, "components", []))
       else:
         call: map_set(event, "kind", "interaction")
       return: event
@@ -63,5 +68,27 @@ class EventParser:
       set option: options[i]
       if: map_get(option, "name", "") == name
         return: map_get(option, "value", fallback)
+      set i: i + 1
+    return: fallback
+
+  # Supports modern type-18 Label wrappers and legacy type-1 action rows.
+  fn modal_value(event, id, fallback):
+    set fields: map_get(event, "fields", [])
+    set i: 0
+    while: i < len(fields)
+      set entry: fields[i]
+      set kind: map_get(entry, "type", 0)
+      if: kind == 18
+        set input: map_get(entry, "component", {})
+        if: map_get(input, "custom_id", "") == id
+          return: map_get(input, "value", fallback)
+      else if: kind == 1
+        set inputs: map_get(entry, "components", [])
+        set j: 0
+        while: j < len(inputs)
+          set input: inputs[j]
+          if: map_get(input, "custom_id", "") == id
+            return: map_get(input, "value", fallback)
+          set j: j + 1
       set i: i + 1
     return: fallback

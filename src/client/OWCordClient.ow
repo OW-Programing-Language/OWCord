@@ -59,3 +59,20 @@ class OWCordClient:
 
   fn send_message(channel_id, content):
     return: this.rest.send_message(channel_id, content)
+  fn send_rich(channel_id, message_json):
+    return: this.rest.send_rich(channel_id, message_json)
+
+  fn reply_rich(event, message_json):
+    return: this.rest.reply_rich(event.id, event.token, message_json)
+
+  fn reply_rich_private(event, message_json):
+    return: this.rest.reply_rich_private(event.id, event.token, message_json)
+
+  fn update_message(event, message_json):
+    return: this.rest.update_component(event.id, event.token, message_json)
+
+  fn show_modal(event, modal_json):
+    return: this.rest.open_modal(event.id, event.token, modal_json)
+
+  fn modal_value(event, id, fallback):
+    return: this.parser.modal_value(event, id, fallback)

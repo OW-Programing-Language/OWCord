@@ -65,6 +65,26 @@ class FakeRest:
     set this.last_message: content
     return: 201
 
+  fn send_rich(channel_id, message_json):
+    set this.last_message: message_json
+    return: 201
+
+  fn reply_rich(id, token, message_json):
+    set this.last_reply: message_json
+    return: 204
+
+  fn reply_rich_private(id, token, message_json):
+    set this.last_reply: message_json
+    return: 204
+
+  fn update_component(id, token, message_json):
+    set this.last_reply: message_json
+    return: 204
+
+  fn open_modal(id, token, modal_json):
+    set this.last_reply: modal_json
+    return: 204
+
 @Test
 fn syncsAndRoutesCommandsWithMockTransport():
   set gateway: new FakeGateway()
@@ -106,3 +126,22 @@ fn forwardsPrivateAndDeferredResponses():
   call: assert(rest.last_followup == "private done")
   call: assert(bot.send_message("123", "hello") == 201)
   call: assert(rest.last_message == "hello")
+
+@Test
+fn forwardsRichMessagesAndModalInteractions():
+  set gateway: new FakeGateway()
+  set rest: new FakeRest()
+  set bot: new OWCordClient(gateway, rest)
+  set event: {id: "123", token: "opaque"}
+  set rich: "{\"content\":\"hello\"}"
+  set modal: "{\"custom_id\":\"form\",\"title\":\"Form\",\"components\":[]}"
+  call: assert(bot.send_rich("456", rich) == 201)
+  call: assert(rest.last_message == rich)
+  call: assert(bot.reply_rich(event, rich) == 204)
+  call: assert(rest.last_reply == rich)
+  call: assert(bot.reply_rich_private(event, rich) == 204)
+  call: assert(rest.last_reply == rich)
+  call: assert(bot.update_message(event, rich) == 204)
+  call: assert(rest.last_reply == rich)
+  call: assert(bot.show_modal(event, modal) == 204)
+  call: assert(rest.last_reply == modal)

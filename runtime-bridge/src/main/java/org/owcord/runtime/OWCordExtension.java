@@ -11,7 +11,9 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.gateway.disconnect", "owcord.rest.dev_command", "owcord.rest.reply",
         "owcord.rest.message", "owcord.test.channel_id",
         "owcord.rest.reply_private", "owcord.rest.defer",
-        "owcord.rest.followup", "owcord.rest.followup_private");
+        "owcord.rest.followup", "owcord.rest.followup_private",
+        "owcord.rest.send_rich", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
+        "owcord.rest.update_component", "owcord.rest.open_modal");
     private DiscordRest rest;
     private DiscordGateway gateway;
 
@@ -22,9 +24,11 @@ public final class OWCordExtension implements RuntimeExtension {
         int required = switch (op) {
             case "owcord.gateway.poll" -> 1;
             case "owcord.rest.dev_command", "owcord.rest.message",
-                 "owcord.rest.followup", "owcord.rest.followup_private" -> 2;
+                 "owcord.rest.followup", "owcord.rest.followup_private",
+                 "owcord.rest.send_rich" -> 2;
             case "owcord.rest.reply", "owcord.rest.reply_private",
-                 "owcord.rest.defer" -> 3;
+                 "owcord.rest.defer", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
+                 "owcord.rest.update_component", "owcord.rest.open_modal" -> 3;
             default -> 0;
         };
         if (args.size() != required) throw new IllegalArgumentException("Wrong argument count for " + op);
@@ -61,6 +65,15 @@ public final class OWCordExtension implements RuntimeExtension {
                 arg(args, 0), arg(args, 1), false);
             case "owcord.rest.followup_private" -> rest().followupInteraction(
                 arg(args, 0), arg(args, 1), true);
+            case "owcord.rest.send_rich" -> rest().sendRichMessage(arg(args, 0), arg(args, 1));
+            case "owcord.rest.reply_rich" -> rest().replyRichInteraction(
+                arg(args, 0), arg(args, 1), arg(args, 2), false);
+            case "owcord.rest.reply_rich_private" -> rest().replyRichInteraction(
+                arg(args, 0), arg(args, 1), arg(args, 2), true);
+            case "owcord.rest.update_component" -> rest().updateComponentMessage(
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.rest.open_modal" -> rest().openModal(
+                arg(args, 0), arg(args, 1), arg(args, 2));
             case "owcord.test.channel_id" -> requiredEnv("DISCORD_TEST_CHANNEL_ID");
             default -> throw new IllegalArgumentException("Unsupported operation");
         };
