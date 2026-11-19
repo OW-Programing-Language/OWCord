@@ -62,10 +62,10 @@ The successful Java/JUnit and offline OW tests do **not** prove the SDK connects
 
 Once this PR is merged into the default branch:
 
-1. Open **Repository Settings → Secrets and variables → Actions → New repository secret**. Add `DISCORD_BOT_TOKEN`, `DISCORD_APPLICATION_ID`, `DISCORD_GUILD_ID`, and `DISCORD_TEST_CHANNEL_ID` (an isolated test text channel where the bot can view and send messages).
-2. Open **Actions → OWCord live Discord smoke test → Run workflow**. This uses Gateway intents `513` (GUILDS + GUILD_MESSAGES), which do **not** request the privileged MESSAGE_CONTENT intent.
+1. Open **Repository Settings → Secrets and variables → Actions → New repository secret**. Add **only** `DISCORD_BOT_TOKEN`. Never put the token into a workflow input, source file, issue or chat. Rotate any token that was previously shared in plaintext.
+2. Open **Actions → OWCord live Discord smoke test → Run workflow**. The manual inputs are prefilled for the OWCord development application (`1572864462447181954`), test guild (`1321509685031075911`) and text channel (`1459838511485157481`), but may be overridden for other test bots. This uses Gateway intents `513` (GUILDS + GUILD_MESSAGES), which do **not** request the privileged MESSAGE_CONTENT intent.
 3. Review the job logs. The test connects to the real Discord Gateway, waits for `READY`, registers the development guild `/ping` slash command, sends a uniquely marked test message through REST, and verifies that the matching `MESSAGE_CREATE` arrives over the Gateway. It then closes the connection.
 
 **This is an automated live transport test, not a completed human invocation of `/ping`.** To verify command invocation and response end-to-end, start `examples/ping_bot/main.ow` with the same bot credentials and invoke `/ping` yourself in the development guild; confirm that Discord displays **Pong from OW!**.
 
-The bot needs application command registration permissions and the ability to post/view messages in the test channel. Never place a bot token in source code, PR comments, logs, or this chat. The test leaves one marked message in the test channel for auditability. GitHub cannot execute the live run until you configure the secrets and explicitly trigger the workflow.
+The bot needs application command registration permissions and the ability to post/view messages in the test channel. Never place a bot token in source code, PR comments, logs, or this chat. The test leaves one marked message in the test channel for auditability. GitHub cannot execute the live run until you configure the token secret and explicitly trigger the workflow.
