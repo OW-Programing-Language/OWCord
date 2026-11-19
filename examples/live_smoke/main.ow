@@ -9,6 +9,7 @@ import "../../src/gateway/infra/JvmGateway.ow"
 import "../../src/rest/api/RestApi.ow"
 import "../../src/rest/infra/JvmRest.ow"
 import "../../src/client/OWCordClient.ow"
+import "../../src/commands/CommandOptions.ow"
 import "../../src/components/DiscordUI.ow"
 
 main:
@@ -42,8 +43,12 @@ main:
   call: assert(gateway.connected() == 1, "live v0.2: active connection")
   print: "LIVE PASS: Discord Gateway READY parsed by OW EventParser"
 
+  # v0.6: register one real typed slash command with autocomplete metadata.
+  set builder: new CommandOptions()
+  set search_schema: [builder.string_option("query", "Search a sample name", true, true)]
+  call: assert(bot.command_options("owdemo6", "v0.6 live option registration", "demo_handler", search_schema) == 1, "live v0.6: register option schema")
   call: assert(bot.sync_dev_commands() == 1, "live v0.2: register /ping and /hello")
-  print: "LIVE PASS: OW CommandRouter registered /ping and /hello via Discord REST"
+  print: "LIVE PASS: OW CommandRouter registered /ping, /hello and typed /owdemo6 via Discord REST"
 
   set channel: extension("owcord.test.channel_id")
   set marker: "OWCord v0.2 live smoke " + str(time_ms())
