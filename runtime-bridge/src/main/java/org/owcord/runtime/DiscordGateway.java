@@ -82,6 +82,7 @@ final class DiscordGateway implements AutoCloseable {
                     if (m.get("resume_gateway_url") instanceof String url) resumeUrl = url;
                     ready = true;
                 }
+                if ("RESUMED".equals(eventType)) ready = true;
                 // OW's current JSON parser does not understand exponent notation (1.23E18).
                 // Discord can include large numeric metadata in Gateway events.
                 // Preserve the payload as far as possible and make re-encoding parseable.
@@ -102,7 +103,10 @@ final class DiscordGateway implements AutoCloseable {
             case 1 -> sendHeartbeat(ws);
             case 7 -> { if (ws != null) ws.abort(); reconnect(); }
             case 9 -> {
-                sessionId = null; sequence = null; resumeUrl = null; ready = false;
+                // Discord can indicate whether the previous session is resumable.
+                // A false/absent flag requires a fresh Identify, not a Resume loop.
+                if (!Boolean.TRUE.equals(e.get("d"))) resetSession();
+                ready = false;
                 if (ws != null) ws.abort();
                 reconnect();
             }
@@ -132,6 +136,20 @@ final class DiscordGateway implements AutoCloseable {
             return safe;
         }
         return value;
+    }
+
+    static boolean requiresFreshSession(int closeCode) {
+        return closeCode == 4007 || closeCode == 4009;
+    }
+
+    static boolean isFatalCloseCode(int closeCode) {
+        return closeCode == 4004 || (closeCode >= 4010 && closeCode <= 4014);
+    }
+
+    private void resetSession() {
+        sessionId = null;
+        sequence = null;
+        resumeUrl = null;
     }
 
     private void identify(WebSocket ws) {
@@ -165,13 +183,15 @@ final class DiscordGateway implements AutoCloseable {
         d.put("op", 1); d.put("d", sequence);
         ws.sendText(Json.write(d), true);
     }
-    private void reconnect() {
+    private void reconnect() { reconnect(3); }
+
+    private void reconnect(int delaySeconds) {
         ready = false;
         if (!running.get() || !pendingReconnect.compareAndSet(false, true)) return;
         timer.schedule(() -> {
             pendingReconnect.set(false);
             if (running.get()) connectSocket();
-        }, 3, TimeUnit.SECONDS);
+        }, delaySeconds, TimeUnit.SECONDS);
     }
     private void push(String json) {
         if (!events.offer(json)) {
@@ -204,10 +224,16 @@ final class DiscordGateway implements AutoCloseable {
         }
         @Override public CompletionStage<?> onClose(WebSocket ws, int code, String reason) {
             if (socket == ws) socket = null;
-            if (code == 4004 || code == 4013 || code == 4014) {
+            ready = false;
+            synchronized (DiscordGateway.this) {
+                if (heartbeat != null) heartbeat.cancel(false);
+            }
+            if (requiresFreshSession(code)) resetSession();
+            if (isFatalCloseCode(code)) {
                 running.set(false);
-                push("{\"type\":\"ERROR\",\"data\":{\"reason\":\"Gateway credentials or intents rejected\"}}");
-            } else reconnect();
+                push("{\"type\":\"ERROR\",\"data\":{\"reason\":\"Gateway rejected session or configuration\"}}");
+            } else if (code == 4008) reconnect(10);
+            else reconnect();
             return CompletableFuture.completedFuture(null);
         }
         @Override public void onError(WebSocket ws, Throwable t) {
