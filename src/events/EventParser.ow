@@ -8,7 +8,7 @@ class EventParser:
     set envelope: json_parse(raw)
     set event_type: map_get(envelope, "type", "NONE")
     set data: map_get(envelope, "data", {})
-    set event: {kind: "other", name: "", handler: "", id: "", token: "", guild_id: "", channel_id: "", user_id: "", custom_id: "", content: "", options: [], values: [], fields: [], payload: data}
+    set event: {kind: "other", name: "", handler: "", id: "", token: "", guild_id: "", channel_id: "", user_id: "", custom_id: "", content: "", options: [], values: [], fields: [], action: "", member_permissions: "", app_permissions: "", payload: data}
 
     if: event_type == "NONE"
       call: map_set(event, "kind", "none")
@@ -19,8 +19,94 @@ class EventParser:
     if: event_type == "ERROR"
       call: map_set(event, "kind", "error")
       return: event
+    if: event_type == "RESUMED"
+      call: map_set(event, "kind", "ready")
+      call: map_set(event, "action", "resumed")
+      return: event
+
+    if: event_type == "MESSAGE_UPDATE"
+      call: map_set(event, "kind", "message")
+      call: map_set(event, "action", "update")
+      call: map_set(event, "id", map_get(data, "id", ""))
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      call: map_set(event, "channel_id", map_get(data, "channel_id", ""))
+      call: map_set(event, "content", map_get(data, "content", ""))
+      return: event
+
+    if: event_type == "MESSAGE_DELETE"
+      call: map_set(event, "kind", "message")
+      call: map_set(event, "action", "delete")
+      call: map_set(event, "id", map_get(data, "id", ""))
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      call: map_set(event, "channel_id", map_get(data, "channel_id", ""))
+      return: event
+
+    if: event_type == "GUILD_MEMBER_ADD"
+      call: map_set(event, "kind", "member")
+      call: map_set(event, "action", "add")
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      set user: map_get(data, "user", {})
+      call: map_set(event, "user_id", map_get(user, "id", ""))
+      return: event
+
+    if: event_type == "GUILD_MEMBER_UPDATE"
+      call: map_set(event, "kind", "member")
+      call: map_set(event, "action", "update")
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      set user: map_get(data, "user", {})
+      call: map_set(event, "user_id", map_get(user, "id", ""))
+      return: event
+
+    if: event_type == "GUILD_MEMBER_REMOVE"
+      call: map_set(event, "kind", "member")
+      call: map_set(event, "action", "remove")
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      set user: map_get(data, "user", {})
+      call: map_set(event, "user_id", map_get(user, "id", ""))
+      return: event
+
+    if: event_type == "CHANNEL_CREATE"
+      call: map_set(event, "kind", "channel")
+      call: map_set(event, "action", "create")
+      call: map_set(event, "id", map_get(data, "id", ""))
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      return: event
+
+    if: event_type == "CHANNEL_UPDATE"
+      call: map_set(event, "kind", "channel")
+      call: map_set(event, "action", "update")
+      call: map_set(event, "id", map_get(data, "id", ""))
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      return: event
+
+    if: event_type == "CHANNEL_DELETE"
+      call: map_set(event, "kind", "channel")
+      call: map_set(event, "action", "delete")
+      call: map_set(event, "id", map_get(data, "id", ""))
+      call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
+      return: event
+
+    if: event_type == "GUILD_CREATE"
+      call: map_set(event, "kind", "guild")
+      call: map_set(event, "action", "create")
+      call: map_set(event, "id", map_get(data, "id", ""))
+      return: event
+
+    if: event_type == "GUILD_UPDATE"
+      call: map_set(event, "kind", "guild")
+      call: map_set(event, "action", "update")
+      call: map_set(event, "id", map_get(data, "id", ""))
+      return: event
+
+    if: event_type == "GUILD_DELETE"
+      call: map_set(event, "kind", "guild")
+      call: map_set(event, "action", "delete")
+      call: map_set(event, "id", map_get(data, "id", ""))
+      return: event
+
     if: event_type == "MESSAGE_CREATE"
       call: map_set(event, "kind", "message")
+      call: map_set(event, "action", "create")
       call: map_set(event, "id", map_get(data, "id", ""))
       call: map_set(event, "content", map_get(data, "content", ""))
       call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
@@ -35,6 +121,8 @@ class EventParser:
       call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
       call: map_set(event, "channel_id", map_get(data, "channel_id", ""))
       set member: map_get(data, "member", {})
+      call: map_set(event, "member_permissions", map_get(member, "permissions", ""))
+      call: map_set(event, "app_permissions", map_get(data, "app_permissions", ""))
       set user: map_get(member, "user", {})
       if: map_get(user, "id", "") == ""
         set user: map_get(data, "user", {})

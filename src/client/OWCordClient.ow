@@ -18,6 +18,14 @@ class OWCordClient:
   fn command(name, description, handler):
     return: this.router.add(name, description, handler)
 
+  fn command_permissions(name, description, handler, required_permissions):
+    return: this.router.add_permissions(name, description, handler, required_permissions)
+
+  # Returns int 1 or 0. Missing member permissions fail closed.
+  fn member_can(event, required_permissions):
+    set granted: map_get(event, "member_permissions", "")
+    return: extension("owcord.permissions.has", granted, required_permissions)
+
   fn command_count():
     return: this.router.count()
 
@@ -28,7 +36,12 @@ class OWCordClient:
     set i: 0
     while: i < len(names)
       set name: names[i]
-      set status: this.rest.register_dev_command(name, this.router.description(name))
+      set required: this.router.permissions(name)
+      set status: 0
+      if: required == ""
+        set status: this.rest.register_dev_command(name, this.router.description(name))
+      else:
+        set status: this.rest.register_dev_command_permissions(name, this.router.description(name), required)
       if: status != 200
         if: status != 201
           return: 0

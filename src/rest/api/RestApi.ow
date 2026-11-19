@@ -12,3 +12,4 @@ module_type DISCORD_REST:
   fn reply_rich_private(interaction_id string, interaction_token string, message_json string) -> int
   fn update_component(interaction_id string, interaction_token string, message_json string) -> int
   fn open_modal(interaction_id string, interaction_token string, modal_json string) -> int
+  fn register_dev_command_permissions(name string, description string, permissions string) -> int

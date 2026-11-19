@@ -3,10 +3,12 @@
 class CommandRouter:
   field handlers
   field descriptions
+  field command_permissions
 
   fn new():
     set this.handlers: {}
     set this.descriptions: {}
+    set this.command_permissions: {}
     return: 0
 
   fn add(name, description, handler):
@@ -23,6 +25,19 @@ class CommandRouter:
     call: map_set(this.handlers, name, handler)
     call: map_set(this.descriptions, name, description)
     return: 1
+
+  # Permissions are decimal strings: Discord can exceed OW's 32-bit range.
+  # Empty means unrestricted; "0" disables by default until guild overrides.
+  fn add_permissions(name, description, handler, required_permissions):
+    if: required_permissions == ""
+      return: 0
+    set added: this.add(name, description, handler)
+    if: added == 1
+      call: map_set(this.command_permissions, name, required_permissions)
+    return: added
+
+  fn permissions(name):
+    return: map_get(this.command_permissions, name, "")
 
   fn names():
     return: map_keys(this.handlers)
