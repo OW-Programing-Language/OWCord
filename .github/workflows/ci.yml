@@ -36,4 +36,4 @@ jobs:
       - name: OW contract test
         run: java -jar ow-lang/target/OwIDE.jar run tests/headless_contracts.ow
       - name: OW v0.2 command and event unit tests
-        run: java -jar ow-lang/target/OwIDE.jar test tests/CommandRouterTest.ow
+        run: java -jar ow-lang/target/OwIDE.jar test tests/
