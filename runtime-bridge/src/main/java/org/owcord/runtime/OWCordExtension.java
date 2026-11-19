@@ -14,7 +14,8 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.rest.followup", "owcord.rest.followup_private",
         "owcord.rest.send_rich", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
         "owcord.rest.update_component", "owcord.rest.open_modal",
-        "owcord.rest.dev_command_permissions", "owcord.permissions.has");
+        "owcord.rest.dev_command_permissions", "owcord.permissions.has",
+        "owcord.rest.dev_command_options", "owcord.rest.autocomplete");
     private DiscordRest rest;
     private DiscordGateway gateway;
 
@@ -30,7 +31,8 @@ public final class OWCordExtension implements RuntimeExtension {
             case "owcord.rest.reply", "owcord.rest.reply_private",
                  "owcord.rest.defer", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
                  "owcord.rest.update_component", "owcord.rest.open_modal",
-                 "owcord.rest.dev_command_permissions" -> 3;
+                 "owcord.rest.dev_command_permissions", "owcord.rest.autocomplete" -> 3;
+            case "owcord.rest.dev_command_options" -> 4;
             default -> 0;
         };
         if (args.size() != required) throw new IllegalArgumentException("Wrong argument count for " + op);
@@ -54,6 +56,11 @@ public final class OWCordExtension implements RuntimeExtension {
                 arg(args, 0), arg(args, 1));
             case "owcord.rest.dev_command_permissions" -> rest().registerGuildCommand(
                 requiredEnv("DISCORD_APPLICATION_ID"), requiredEnv("DISCORD_GUILD_ID"),
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.rest.dev_command_options" -> rest().registerGuildCommandOptions(
+                requiredEnv("DISCORD_APPLICATION_ID"), requiredEnv("DISCORD_GUILD_ID"),
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
+            case "owcord.rest.autocomplete" -> rest().replyAutocomplete(
                 arg(args, 0), arg(args, 1), arg(args, 2));
             case "owcord.permissions.has" -> DiscordPermissions.memberCan(arg(args, 0), arg(args, 1)) ? 1 : 0;
             case "owcord.rest.reply" -> rest().replyInteraction(
