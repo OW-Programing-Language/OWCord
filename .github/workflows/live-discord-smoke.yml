@@ -18,7 +18,7 @@ on:
         type: string
         default: '1459838511485157481'
   push:
-    branches: [main, feat/v0.5-permissions-events-reconnect]
+    branches: [main]
     paths:
       - 'src/**'
       - 'runtime-bridge/**'
