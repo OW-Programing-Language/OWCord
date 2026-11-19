@@ -1,0 +1,53 @@
+name: OWCord live Discord smoke test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: owcord-live-discord
+  cancel-in-progress: false
+jobs:
+  live-discord:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+      DISCORD_TEST_CHANNEL_ID: ${{ secrets.DISCORD_TEST_CHANNEL_ID }}
+      OWCORD_GATEWAY_INTENTS: '513'
+    steps:
+      - name: Check that development credentials are configured
+        shell: bash
+        run: |
+          for name in DISCORD_BOT_TOKEN DISCORD_APPLICATION_ID DISCORD_GUILD_ID DISCORD_TEST_CHANNEL_ID; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing repository Actions secret: ${name}"
+              exit 1
+            fi
+          done
+      - name: Checkout OWCord
+        uses: actions/checkout@v4
+      - name: Checkout OW
+        uses: actions/checkout@v4
+        with:
+          repository: OW-Programing-Language/ow-lang
+          path: ow-lang
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install OW compiler
+        run: mvn -B -ntp -f ow-lang/pom.xml -DskipTests install
+      - name: Build Discord runtime
+        run: mvn -B -ntp -f runtime-bridge/pom.xml verify
+      - name: Install flOW dependencies
+        run: java -jar ow-lang/target/OwIDE.jar deps install
+      - name: Type-check live OW smoke test
+        run: java -jar ow-lang/target/OwIDE.jar check examples/live_smoke/main.ow
+      - name: Test real Discord bot with Gateway + REST
+        run: |
+          timeout 160s java -cp "ow-lang/target/OwIDE.jar:runtime-bridge/target/owcord-runtime-0.1.0-SNAPSHOT.jar" dev.oreo.Main run examples/live_smoke/main.ow
+      - name: Verify summary
+        run: echo 'OWCord live Discord smoke test passed.'
