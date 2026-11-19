@@ -48,11 +48,11 @@ tests/headless_contracts.ow                 offline flOW smoke test
 
 ## Limits and security
 
-This first version handles one session per interpreter, a maximum 1,024 queued events, and immediate slash-command replies. Some reconnect/resume situations are handled, but full connection lifecycle, bucket-aware rate limits, sharding, structured errors, full interaction lifecycle coverage and queue durability are still future work. A short 429 retry is supported. Discord may disconnect sessions with invalid intents. Gateway bot token remains in environment variables, and automatic mentions are disabled in outgoing messages.
+This first version handles one session per interpreter, a maximum 1,024 queued events, and immediate slash-command replies. Some reconnect/resume situations are handled, but full connection lifecycle, bucket-aware rate limits, sharding, structured errors, full interaction lifecycle coverage and queue durability are still future work. Bounded 429 backoff and response-header-based rate-limit tracking are supported in v0.4; see the reliability guide. Discord may disconnect sessions with invalid intents. Gateway bot token remains in environment variables, and automatic mentions are disabled in outgoing messages.
 
 Read [Discord's Gateway API](https://docs.discord.com/developers/events/gateway) and [interaction guide](https://docs.discord.com/developers/interactions/receiving-and-responding).
 
-Next milestones: embeds/buttons/modals, permissions, better reconnect and rate limits, sharding, and optional Night HTTP interactions. OW-native command routing and event normalization are introduced in v0.2.
+Next milestones: permissions, stronger Gateway reconnect behavior, distributed REST rate-limit coordination, sharding, and optional Night HTTP interactions. OW-native command routing and event normalization are introduced in v0.2.
 
 License: MIT.
 
@@ -104,3 +104,9 @@ OWUnit tests and the CI type check cover the initial implementation.
 Real clicks and modal submissions need a Discord-user interaction test
 before claiming complete live validation; the existing secret is held in
 GitHub Actions and not in this repository's source.
+
+## v0.4 — reliability and rate-limit handling (PR #4)
+
+REST now honors Discord response headers for per-route buckets and global 429s, applies bounded retries with interaction-aware wait budgets, and avoids replaying ambiguous failed POST requests. Gateway reconnection now resets invalid sequence/session state, handles non-retriable close codes and restores readiness after Resume.
+
+Read the [reliability guide](docs/RELIABILITY.md). Java/JUnit local-server tests verify the new behavior without consuming real Discord API requests.
