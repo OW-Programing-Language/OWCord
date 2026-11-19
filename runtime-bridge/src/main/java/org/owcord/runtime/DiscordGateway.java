@@ -1,6 +1,9 @@
 package org.owcord.runtime;
 
 import dev.oreo.Json;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.net.URI;
 import java.net.http.WebSocket;
 import java.time.Duration;
@@ -79,7 +82,13 @@ final class DiscordGateway implements AutoCloseable {
                     if (m.get("resume_gateway_url") instanceof String url) resumeUrl = url;
                     ready = true;
                 }
-                push(Json.write(Map.of("type", eventType, "data", d == null ? Map.of() : d)));
+                // OW's current JSON parser does not understand exponent notation (1.23E18).
+                // Discord can include large numeric metadata in Gateway events.
+                // Preserve the payload as far as possible and make re-encoding parseable.
+                String outgoing = Json.write(Map.of("type", eventType,
+                    "data", owCompatible(d == null ? Map.of() : d)));
+                Json.parse(outgoing); // Guard the Java -> OW JSON boundary.
+                push(outgoing);
             }
             case 10 -> {
                 if (e.get("d") instanceof Map<?, ?> hello &&
@@ -100,6 +109,31 @@ final class DiscordGateway implements AutoCloseable {
             default -> { }
         }
     }
+    /**
+     * OW JSON currently rejects numeric exponent notation. The OW parser also
+     * reads integers beyond 32 bits as doubles, so keep those values as decimal
+     * strings rather than inventing an imprecise integer. Native JSON payloads
+     * and numeric values already supported by OW are unchanged.
+     */
+    private static Object owCompatible(Object value) {
+        if (value instanceof Double d && (d.toString().contains("E") || d.toString().contains("e"))) {
+            return BigDecimal.valueOf(d).toPlainString();
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> safe = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                safe.put(String.valueOf(entry.getKey()), owCompatible(entry.getValue()));
+            }
+            return safe;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> safe = new ArrayList<>();
+            for (Object element : list) safe.add(owCompatible(element));
+            return safe;
+        }
+        return value;
+    }
+
     private void identify(WebSocket ws) {
         if (ws == null || !running.get()) return;
         ws.sendText(Json.write(Map.of("op", 2, "d", Map.of(
