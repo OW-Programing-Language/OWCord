@@ -129,4 +129,25 @@ class DiscordReliabilityTest {
             assertTrue(gateway.isReady(), "RESUMED should restore connected() status");
         }
     }
+    @Test void rateLimitForOneWebhookDoesNotBlockAnotherWebhook() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        HttpServer server = server((exchange, number) -> {
+            if (number == 1) {
+                exchange.getResponseHeaders().set("X-RateLimit-Bucket", "shared-webhook-route");
+                exchange.getResponseHeaders().set("X-RateLimit-Remaining", "0");
+                exchange.getResponseHeaders().set("X-RateLimit-Reset-After", "3");
+            }
+            respond(exchange, 200, "{}");
+        }, calls);
+        try {
+            DiscordRest rest = client(server);
+            assertEquals(200, rest.followupInteraction("123", "first-secret-token", "hello", false));
+            long start = System.nanoTime();
+            assertEquals(200, rest.followupInteraction("456", "second-secret-token", "hello", false));
+            long millis = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+            assertEquals(2, calls.get());
+            assertTrue(millis < 1800, "Distinct major resources should not share cooldown deadlines");
+        } finally { server.stop(0); }
+    }
+
 }
