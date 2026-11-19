@@ -1,0 +1,62 @@
+# Contract smoke test without credentials or Java bridge.
+import "@flow/src/App.ow"
+import "../src/gateway/api/GatewayApi.ow"
+import "../src/rest/api/RestApi.ow"
+
+module OWCord.MockGateway: DISCORD_GATEWAY
+  fn name() -> string:
+    return: "gateway"
+  fn requires() -> array:
+    return: []
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    return: 0
+  fn stop() -> int:
+    return: 0
+  fn reload() -> int:
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+  fn connected() -> int:
+    return: 1
+  fn poll(timeout_ms int) -> string:
+    return: "{\"type\":\"NONE\",\"data\":{}}"
+
+module OWCord.MockRest: DISCORD_REST
+  fn name() -> string:
+    return: "rest"
+  fn requires() -> array:
+    return: []
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    return: 0
+  fn stop() -> int:
+    return: 0
+  fn reload() -> int:
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+  fn register_dev_command(name string, description string) -> int:
+    return: 201
+  fn reply(interaction_id string, interaction_token string, content string) -> int:
+    return: 204
+  fn send_message(channel_id string, content string) -> int:
+    return: 200
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.MockGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.MockRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "flOW boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  call: assert(gateway.connected() == 1, "gateway mock")
+  set event: json_parse(gateway.poll(0))
+  call: assert(event.type == "NONE", "event format")
+  call: assert(rest.register_dev_command("ping", "test") == 201, "commands")
+  call: assert(rest.reply("1", "token", "pong") == 204, "reply")
+  call: assert(rest.send_message("2", "hello") == 200, "messages")
+  call: assert(app.stop() == 1, "clean shutdown")
+  print: "PASS: typed OWCord contracts and flOW lifecycle"

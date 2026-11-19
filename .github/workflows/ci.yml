@@ -1,0 +1,36 @@
+name: OWCord CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout OWCord
+        uses: actions/checkout@v4
+      - name: Checkout OW
+        uses: actions/checkout@v4
+        with:
+          repository: OW-Programing-Language/ow-lang
+          path: ow-lang
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install OW compiler
+        run: mvn -B -ntp -f ow-lang/pom.xml -DskipTests install
+      - name: Test Java runtime bridge
+        run: mvn -B -ntp -f runtime-bridge/pom.xml verify
+      - name: Install flOW
+        run: java -jar ow-lang/target/OwIDE.jar deps install
+      - name: OW type checks
+        run: |
+          java -jar ow-lang/target/OwIDE.jar check tests/headless_contracts.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/ping_bot/main.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/live_smoke/main.ow
+      - name: OW contract test
+        run: java -jar ow-lang/target/OwIDE.jar run tests/headless_contracts.ow

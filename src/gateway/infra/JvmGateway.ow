@@ -1,0 +1,19 @@
+module OWCord.JvmGateway: DISCORD_GATEWAY
+  fn name() -> string:
+    return: "gateway"
+  fn requires() -> array:
+    return: []
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    return: extension("owcord.gateway.connect")
+  fn stop() -> int:
+    return: extension("owcord.gateway.disconnect")
+  fn reload() -> int:
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+  fn connected() -> int:
+    return: extension("owcord.gateway.connected")
+  fn poll(timeout_ms int) -> string:
+    return: extension("owcord.gateway.poll", timeout_ms)
