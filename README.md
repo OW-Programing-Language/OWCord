@@ -55,3 +55,17 @@ Read [Discord's Gateway API](https://docs.discord.com/developers/events/gateway)
 Next milestones: typed command router, strongly typed events, embeds/buttons/modals, permissions, better reconnect and rate limits, sharding, and optional Night HTTP interactions.
 
 License: MIT.
+
+## Live Discord smoke test (requires a real bot)
+
+The successful Java/JUnit and offline OW tests do **not** prove the SDK connects to Discord. A separate **manual** GitHub Actions workflow is now available: `.github/workflows/live-discord-smoke.yml`. It is intentionally not run on ordinary pull requests, because it uses privileged credentials and creates one Discord message in a development channel.
+
+Once this PR is merged into the default branch:
+
+1. Open **Repository Settings → Secrets and variables → Actions → New repository secret**. Add `DISCORD_BOT_TOKEN`, `DISCORD_APPLICATION_ID`, `DISCORD_GUILD_ID`, and `DISCORD_TEST_CHANNEL_ID` (an isolated test text channel where the bot can view and send messages).
+2. Open **Actions → OWCord live Discord smoke test → Run workflow**. This uses Gateway intents `513` (GUILDS + GUILD_MESSAGES), which do **not** request the privileged MESSAGE_CONTENT intent.
+3. Review the job logs. The test connects to the real Discord Gateway, waits for `READY`, registers the development guild `/ping` slash command, sends a uniquely marked test message through REST, and verifies that the matching `MESSAGE_CREATE` arrives over the Gateway. It then closes the connection.
+
+**This is an automated live transport test, not a completed human invocation of `/ping`.** To verify command invocation and response end-to-end, start `examples/ping_bot/main.ow` with the same bot credentials and invoke `/ping` yourself in the development guild; confirm that Discord displays **Pong from OW!**.
+
+The bot needs application command registration permissions and the ability to post/view messages in the test channel. Never place a bot token in source code, PR comments, logs, or this chat. The test leaves one marked message in the test channel for auditability. GitHub cannot execute the live run until you configure the secrets and explicitly trigger the workflow.
