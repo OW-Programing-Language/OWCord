@@ -46,8 +46,13 @@ final class DiscordRest {
     }
 
     int registerGuildCommand(String application, String guild, String name, String description) {
+        return registerGuildCommand(application, guild, name, description, null);
+    }
+
+    int registerGuildCommand(String application, String guild, String name, String description,
+                             String defaultPermissions) {
         String path = "applications/" + snowflake(application) + "/guilds/" + snowflake(guild) + "/commands";
-        HttpResponse<String> r = request("POST", path, commandPayload(name, description), true);
+        HttpResponse<String> r = request("POST", path, commandPayload(name, description, defaultPermissions), true);
         check(r);
         return r.statusCode();
     }
@@ -121,11 +126,17 @@ final class DiscordRest {
         return id;
     }
     static String commandPayload(String name, String desc) {
+        return commandPayload(name, desc, null);
+    }
+    static String commandPayload(String name, String desc, String defaultPermissions) {
         if (name == null || !name.matches("[a-z0-9_-]{1,32}"))
             throw new IllegalArgumentException("Invalid slash command name");
         if (desc == null || desc.isBlank() || desc.length() > 100)
             throw new IllegalArgumentException("Description must have 1-100 characters");
-        return Json.write(Map.of("type", 1, "name", name, "description", desc));
+        if (defaultPermissions == null)
+            return Json.write(Map.of("type", 1, "name", name, "description", desc));
+        return Json.write(Map.of("type", 1, "name", name, "description", desc,
+            "default_member_permissions", DiscordPermissions.defaultPermissions(defaultPermissions)));
     }
     static String messagePayload(String content) {
         return Json.write(Map.of("content", content(content),

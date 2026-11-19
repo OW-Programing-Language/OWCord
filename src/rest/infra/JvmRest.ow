@@ -37,3 +37,5 @@ module OWCord.JvmRest: DISCORD_REST
     return: extension("owcord.rest.update_component", interaction_id, interaction_token, message_json)
   fn open_modal(interaction_id string, interaction_token string, modal_json string) -> int:
     return: extension("owcord.rest.open_modal", interaction_id, interaction_token, modal_json)
+  fn register_dev_command_permissions(name string, description string, permissions string) -> int:
+    return: extension("owcord.rest.dev_command_permissions", name, description, permissions)

@@ -1,0 +1,35 @@
+# Restrict a guild slash command using Discord's decimal permission bitset.
+# MANAGE_MESSAGES = 8192. Run only in a trusted development guild.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "permission demo: start")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+
+  call: assert(bot.command("ping", "Public health check", "ping") == 1)
+  call: assert(bot.command_permissions("modcheck", "Moderator-only example", "modcheck", "8192") == 1)
+  call: assert(bot.sync_dev_commands() == 1, "permission demo: register")
+
+  print: "OWCord v0.5 permission demo ready"
+  while: 1 == 1
+    set event: bot.next(250)
+    if: event.kind == "command"
+      if: event.handler == "ping"
+        call: bot.reply(event, "Pong!")
+      else if: event.handler == "modcheck"
+        if: bot.member_can(event, "8192") == 1
+          call: bot.reply_private(event, "Permission check passed.")
+        else:
+          call: bot.reply_private(event, "Permission check failed.")
+    else if: event.kind == "error"
+      throw: "Gateway error"

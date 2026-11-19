@@ -52,6 +52,8 @@ module OWCord.MockRest: DISCORD_REST
     return: 200
   fn followup_ephemeral(interaction_token string, content string) -> int:
     return: 200
+  fn register_dev_command_permissions(name string, description string, permissions string) -> int:
+    return: 201
   fn send_rich(channel_id string, message_json string) -> int:
     return: 201
   fn reply_rich(interaction_id string, interaction_token string, message_json string) -> int:

@@ -110,3 +110,13 @@ GitHub Actions and not in this repository's source.
 REST now honors Discord response headers for per-route buckets and global 429s, applies bounded retries with interaction-aware wait budgets, and avoids replaying ambiguous failed POST requests. Gateway reconnection now resets invalid sequence/session state, handles non-retriable close codes and restores readiness after Resume.
 
 Read the [reliability guide](docs/RELIABILITY.md). Java/JUnit local-server tests verify the new behavior without consuming real Discord API requests.
+
+## v0.5 — permissions, Gateway event handling and reconnect backoff
+
+- Permission-limited guild slash commands via `bot.command_permissions(name, description, handler, "8192")`, using exact unsigned decimal-string bitfields.
+- Runtime member bitmask helper `bot.member_can(event, "8192")` with missing-context fail-closed behavior.
+- Added normalized message updates/deletes, guild member lifecycle, channel/guild changes and Resume events.
+- Added bounded, jittered Gateway reconnect scheduling, a hard cap on accumulated text frames and stale socket callback protection.
+- Existing public OWCord/flOW APIs remain backwards compatible.
+
+See [v0.5 permissions and event guide](docs/PERMISSIONS-EVENTS.md) and [the restricted-command example](examples/permissions_demo/main.ow). Native compiler support remains a separate `ow-lang` milestone.
