@@ -18,7 +18,7 @@ on:
         type: string
         default: '1459838511485157481'
   push:
-    branches: [main]
+    branches: [main, feat/v0.3-rich-components-modals]
     paths:
       - 'src/**'
       - 'runtime-bridge/**'
