@@ -62,7 +62,7 @@ class CommandRouter:
       return: 0
     if: handler == ""
       return: 0
-    if: not map_has(this.handlers, name)
+    if: map_has(this.handlers, name) == false
       return: 0
     set key: name + ":" + path
     if: map_has(this.routes, key)
