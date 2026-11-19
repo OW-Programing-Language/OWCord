@@ -31,5 +31,6 @@ jobs:
         run: |
           java -jar ow-lang/target/OwIDE.jar check tests/headless_contracts.ow
           java -jar ow-lang/target/OwIDE.jar check examples/ping_bot/main.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/live_smoke/main.ow
       - name: OW contract test
         run: java -jar ow-lang/target/OwIDE.jar run tests/headless_contracts.ow
