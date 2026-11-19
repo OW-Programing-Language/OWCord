@@ -48,27 +48,33 @@ tests/headless_contracts.ow                 offline flOW smoke test
 
 ## Limits and security
 
-This first version handles one session per interpreter, a maximum 1,024 queued events, and immediate slash-command replies. Some reconnect/resume situations are handled, but full connection lifecycle, bucket-aware rate limits, sharding, structured errors, interaction deferral and queue durability are still future work. A short 429 retry is supported. Discord may disconnect sessions with invalid intents. Gateway bot token remains in environment variables, and automatic mentions are disabled in outgoing messages.
+This first version handles one session per interpreter, a maximum 1,024 queued events, and immediate slash-command replies. Some reconnect/resume situations are handled, but full connection lifecycle, bucket-aware rate limits, sharding, structured errors, full interaction lifecycle coverage and queue durability are still future work. A short 429 retry is supported. Discord may disconnect sessions with invalid intents. Gateway bot token remains in environment variables, and automatic mentions are disabled in outgoing messages.
 
 Read [Discord's Gateway API](https://docs.discord.com/developers/events/gateway) and [interaction guide](https://docs.discord.com/developers/interactions/receiving-and-responding).
 
-Next milestones: typed command router, strongly typed events, embeds/buttons/modals, permissions, better reconnect and rate limits, sharding, and optional Night HTTP interactions.
+Next milestones: embeds/buttons/modals, permissions, better reconnect and rate limits, sharding, and optional Night HTTP interactions. OW-native command routing and event normalization are introduced in v0.2.
 
 License: MIT.
 
-## Live Discord smoke test (requires a real bot)
+## Live Discord tests (real token in GitHub Secrets)
 
-The successful Java/JUnit and offline OW tests do **not** prove the SDK connects to Discord. A separate **manual** GitHub Actions workflow is now available: `.github/workflows/live-discord-smoke.yml`. It is intentionally not run on ordinary pull requests, because it uses privileged credentials and creates one Discord message in a development channel.
+The live smoke workflow is `.github/workflows/live-discord-smoke.yml`. It runs **automatically on relevant pushes to the trusted `main` branch**, plus on manually selected `workflow_dispatch` runs. It does not supply the bot token to ordinary pull-request workflows; pull requests run Java/OW tests without secrets.
 
-Once this PR is merged into the default branch:
+The bot token must be stored only as repository Actions secret `DISCORD_BOT_TOKEN`. GitHub Actions pre-fills the development application, guild and test-channel IDs; credentials are read from the environment, never committed or printed.
 
-1. Open **Repository Settings → Secrets and variables → Actions → New repository secret**. Add **only** `DISCORD_BOT_TOKEN`. Never put the token into a workflow input, source file, issue or chat. Rotate any token that was previously shared in plaintext.
-2. Open **Actions → OWCord live Discord smoke test → Run workflow**. The manual inputs are prefilled for the OWCord development application (`1572864462447181954`), test guild (`1321509685031075911`) and text channel (`1459838511485157481`), but may be overridden for other test bots. This uses Gateway intents `513` (GUILDS + GUILD_MESSAGES), which do **not** request the privileged MESSAGE_CONTENT intent.
-3. Review the job logs. The test connects to the real Discord Gateway, waits for `READY`, registers the development guild `/ping` slash command, sends a uniquely marked test message through REST, and verifies that the matching `MESSAGE_CREATE` arrives over the Gateway. It then closes the connection.
+The live v0.2 scenario in `examples/live_smoke/main.ow`:
 
-**This is an automated live transport test, not a completed human invocation of `/ping`.** To verify command invocation and response end-to-end, start `examples/ping_bot/main.ow` with the same bot credentials and invoke `/ping` yourself in the development guild; confirm that Discord displays **Pong from OW!**.
+1. Boots Gateway and REST services through flOW and creates an OW-native `OWCordClient`.
+2. Checks command registration and duplicate handling in OW, then connects to the **real** Discord Gateway and parses READY.
+3. Creates or updates real guild `/ping` and `/hello` commands through the SDK.
+4. Sends one uniquely marked message to the development channel and confirms the matching Gateway `MESSAGE_CREATE` using the OW `EventParser`, including nonempty message and author IDs and matching channel ID.
+5. Closes the Gateway and flOW services.
 
-The bot needs application command registration permissions and the ability to post/view messages in the test channel. Never place a bot token in source code, PR comments, logs, or this chat. The test leaves one marked message in the test channel for auditability. GitHub cannot execute the live run until you configure the token secret and explicitly trigger the workflow.
+**Evidence:** [successful v0.2 live Discord run](https://github.com/OW-Programing-Language/OWCord/actions/runs/44478263864) plus [successful Java/OW CI](https://github.com/OW-Programing-Language/OWCord/actions/runs/44478269511).
+
+**Coverage boundary:** Bots cannot generate their own genuine user slash-command interactions through the Discord API. This automation verifies real command *registration*, but not a human invoking a command and seeing an interaction response. Ephemeral responses, deferral and follow-ups have offline unit/mocked transport coverage; they still need a human-initiated interaction integration check. Do not describe them as live-tested until that check is performed.
+
+Future OWCord features should add an offline test and extend this live scenario for any behavior verifiable using the bot token. Keep real Discord tests on a dedicated development guild and channel because each run posts one audit message. Do not expose secrets to forks, PR comments, logs, or code.
 
 
 ## v0.2: commands, normalized events, and deferred replies
@@ -81,4 +87,4 @@ See [commands guide](docs/COMMANDS.md) and [runnable two-command example](exampl
 - Java REST provider supports ephemeral interaction responses, deferred acknowledgement, and public/private follow-ups, with content validation and no automatic mentions.
 - Run offline OW tests: `ow test tests/CommandRouterTest.ow`; Java transport tests run through `mvn -f runtime-bridge/pom.xml verify`.
 
-This API dispatches **handler labels**, not arbitrary function callbacks. The example explicitly routes handler names into OW functions/logic. The live Discord smoke test remains manual-only and is not triggered by pull requests.
+This API dispatches **handler labels**, not arbitrary function callbacks. The example explicitly routes handler names into OW functions/logic. Live tests run on trusted main-branch changes and manual dispatches, but not on ordinary pull requests.
