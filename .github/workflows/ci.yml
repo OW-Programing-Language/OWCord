@@ -34,6 +34,7 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar check examples/live_smoke/main.ow
           java -jar ow-lang/target/OwIDE.jar check examples/command_router/main.ow
           java -jar ow-lang/target/OwIDE.jar check examples/components_demo/main.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/permissions_demo/main.ow
       - name: OW contract test
         run: java -jar ow-lang/target/OwIDE.jar run tests/headless_contracts.ow
       - name: OW v0.2 command and event unit tests
