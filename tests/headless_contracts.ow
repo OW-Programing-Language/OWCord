@@ -52,6 +52,16 @@ module OWCord.MockRest: DISCORD_REST
     return: 200
   fn followup_ephemeral(interaction_token string, content string) -> int:
     return: 200
+  fn send_rich(channel_id string, message_json string) -> int:
+    return: 201
+  fn reply_rich(interaction_id string, interaction_token string, message_json string) -> int:
+    return: 204
+  fn reply_rich_private(interaction_id string, interaction_token string, message_json string) -> int:
+    return: 204
+  fn update_component(interaction_id string, interaction_token string, message_json string) -> int:
+    return: 204
+  fn open_modal(interaction_id string, interaction_token string, modal_json string) -> int:
+    return: 204
 
 main:
   set app: new App()
