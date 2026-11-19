@@ -69,3 +69,16 @@ Once this PR is merged into the default branch:
 **This is an automated live transport test, not a completed human invocation of `/ping`.** To verify command invocation and response end-to-end, start `examples/ping_bot/main.ow` with the same bot credentials and invoke `/ping` yourself in the development guild; confirm that Discord displays **Pong from OW!**.
 
 The bot needs application command registration permissions and the ability to post/view messages in the test channel. Never place a bot token in source code, PR comments, logs, or this chat. The test leaves one marked message in the test channel for auditability. GitHub cannot execute the live run until you configure the token secret and explicitly trigger the workflow.
+
+
+## v0.2: commands, normalized events, and deferred replies
+
+See [commands guide](docs/COMMANDS.md) and [runnable two-command example](examples/command_router/main.ow).
+
+- Pure OW `CommandRouter` registers up to 32 named slash commands and resolves deterministic handler labels.
+- Pure OW `EventParser` normalizes `READY`, `MESSAGE_CREATE`, `INTERACTION_CREATE` and unrecognized events into stable records.
+- `OWCordClient` combines the two with the flOW-managed Gateway/REST services, plus `bot.next(timeout_ms)`, `bot.reply(event, text)`, `bot.reply_private(event, text)`, `bot.defer(event, 0/1)`, and `bot.followup(event, text)`.
+- Java REST provider supports ephemeral interaction responses, deferred acknowledgement, and public/private follow-ups, with content validation and no automatic mentions.
+- Run offline OW tests: `ow test tests/CommandRouterTest.ow`; Java transport tests run through `mvn -f runtime-bridge/pom.xml verify`.
+
+This API dispatches **handler labels**, not arbitrary function callbacks. The example explicitly routes handler names into OW functions/logic. The live Discord smoke test remains manual-only and is not triggered by pull requests.

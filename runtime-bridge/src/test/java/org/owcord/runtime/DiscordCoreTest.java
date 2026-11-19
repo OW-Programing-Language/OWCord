@@ -47,6 +47,48 @@ class DiscordCoreTest {
         }
     }
 
+    @Test void supportsPrivateAndDeferredInteractionResponses() {
+        Map<?, ?> privateCallback = (Map<?, ?>) Json.parse(DiscordRest.replyPayload("only you", true));
+        assertEquals(4, privateCallback.get("type"));
+        Map<?, ?> privateData = (Map<?, ?>) privateCallback.get("data");
+        assertEquals(64, privateData.get("flags"));
+        assertEquals(List.of(), ((Map<?, ?>) privateData.get("allowed_mentions")).get("parse"));
+
+        Map<?, ?> publicDefer = (Map<?, ?>) Json.parse(DiscordRest.deferPayload(false));
+        assertEquals(5, publicDefer.get("type"));
+        assertFalse(publicDefer.containsKey("data"));
+        Map<?, ?> privateDefer = (Map<?, ?>) Json.parse(DiscordRest.deferPayload(true));
+        assertEquals(64, ((Map<?, ?>) privateDefer.get("data")).get("flags"));
+
+        Map<?, ?> followup = (Map<?, ?>) Json.parse(DiscordRest.followupPayload("done", true));
+        assertEquals(64, followup.get("flags"));
+        assertEquals("done", followup.get("content"));
+        assertEquals(List.of(), ((Map<?, ?>) followup.get("allowed_mentions")).get("parse"));
+        assertThrows(IllegalArgumentException.class, () -> DiscordRest.interactionToken("../bad"));
+    }
+    @Test void followsUpViaWebhookWithoutBotAuthorizationHeader() throws Exception {
+        java.util.concurrent.atomic.AtomicReference<String> path = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicReference<String> authorization = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicReference<String> posted = new java.util.concurrent.atomic.AtomicReference<>();
+        var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/", exchange -> {
+            path.set(exchange.getRequestURI().getPath());
+            authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            posted.set(new String(exchange.getRequestBody().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            byte[] response = "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, response.length);
+            try (var out = exchange.getResponseBody()) { out.write(response); }
+        });
+        server.start();
+        try {
+            DiscordRest rest = new DiscordRest(HttpClient.newHttpClient(),
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/"), "unused-bot-token");
+            assertEquals(200, rest.followupInteraction("12345", "callback-token", "hello", true));
+            assertEquals("/webhooks/12345/callback-token", path.get());
+            assertNull(authorization.get());
+            assertEquals(64, ((Map<?, ?>) Json.parse(posted.get())).get("flags"));
+        } finally { server.stop(0); }
+    }
     @Test void operationDispatchIsAllowlisted() {
         try (OWCordExtension extension = new OWCordExtension()) {
             assertTrue(extension.supports("owcord.rest.reply"));

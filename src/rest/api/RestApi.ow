@@ -3,3 +3,7 @@ module_type DISCORD_REST:
   fn register_dev_command(name string, description string) -> int
   fn reply(interaction_id string, interaction_token string, content string) -> int
   fn send_message(channel_id string, content string) -> int
+  fn reply_ephemeral(interaction_id string, interaction_token string, content string) -> int
+  fn defer(interaction_id string, interaction_token string, private int) -> int
+  fn followup(interaction_token string, content string) -> int
+  fn followup_ephemeral(interaction_token string, content string) -> int

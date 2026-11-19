@@ -9,7 +9,9 @@ public final class OWCordExtension implements RuntimeExtension {
     private static final Set<String> METHODS = Set.of(
         "owcord.gateway.connect", "owcord.gateway.connected", "owcord.gateway.poll",
         "owcord.gateway.disconnect", "owcord.rest.dev_command", "owcord.rest.reply",
-        "owcord.rest.message", "owcord.test.channel_id");
+        "owcord.rest.message", "owcord.test.channel_id",
+        "owcord.rest.reply_private", "owcord.rest.defer",
+        "owcord.rest.followup", "owcord.rest.followup_private");
     private DiscordRest rest;
     private DiscordGateway gateway;
 
@@ -19,8 +21,10 @@ public final class OWCordExtension implements RuntimeExtension {
         if (!supports(op)) throw new IllegalArgumentException("Unknown OWCord operation");
         int required = switch (op) {
             case "owcord.gateway.poll" -> 1;
-            case "owcord.rest.dev_command", "owcord.rest.message" -> 2;
-            case "owcord.rest.reply" -> 3;
+            case "owcord.rest.dev_command", "owcord.rest.message",
+                 "owcord.rest.followup", "owcord.rest.followup_private" -> 2;
+            case "owcord.rest.reply", "owcord.rest.reply_private",
+                 "owcord.rest.defer" -> 3;
             default -> 0;
         };
         if (args.size() != required) throw new IllegalArgumentException("Wrong argument count for " + op);
@@ -45,6 +49,18 @@ public final class OWCordExtension implements RuntimeExtension {
             case "owcord.rest.reply" -> rest().replyInteraction(
                 arg(args, 0), arg(args, 1), arg(args, 2));
             case "owcord.rest.message" -> rest().sendMessage(arg(args, 0), arg(args, 1));
+            case "owcord.rest.reply_private" -> rest().replyInteraction(
+                arg(args, 0), arg(args, 1), arg(args, 2), true);
+            case "owcord.rest.defer" -> {
+                if (!(args.get(2) instanceof Number flag) ||
+                    (flag.intValue() != 0 && flag.intValue() != 1))
+                    throw new IllegalArgumentException("defer visibility must be 0 or 1");
+                yield rest().deferInteraction(arg(args, 0), arg(args, 1), flag.intValue() == 1);
+            }
+            case "owcord.rest.followup" -> rest().followupInteraction(
+                arg(args, 0), arg(args, 1), false);
+            case "owcord.rest.followup_private" -> rest().followupInteraction(
+                arg(args, 0), arg(args, 1), true);
             case "owcord.test.channel_id" -> requiredEnv("DISCORD_TEST_CHANNEL_ID");
             default -> throw new IllegalArgumentException("Unsupported operation");
         };

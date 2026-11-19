@@ -19,3 +19,11 @@ module OWCord.JvmRest: DISCORD_REST
     return: extension("owcord.rest.reply", interaction_id, interaction_token, content)
   fn send_message(channel_id string, content string) -> int:
     return: extension("owcord.rest.message", channel_id, content)
+  fn reply_ephemeral(interaction_id string, interaction_token string, content string) -> int:
+    return: extension("owcord.rest.reply_private", interaction_id, interaction_token, content)
+  fn defer(interaction_id string, interaction_token string, private int) -> int:
+    return: extension("owcord.rest.defer", interaction_id, interaction_token, private)
+  fn followup(interaction_token string, content string) -> int:
+    return: extension("owcord.rest.followup", interaction_token, content)
+  fn followup_ephemeral(interaction_token string, content string) -> int:
+    return: extension("owcord.rest.followup_private", interaction_token, content)

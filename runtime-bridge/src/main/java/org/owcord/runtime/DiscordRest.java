@@ -51,12 +51,33 @@ final class DiscordRest {
         return r.statusCode();
     }
     int replyInteraction(String id, String interactionToken, String content) {
-        if (interactionToken == null || !interactionToken.matches("[A-Za-z0-9_.-]{1,512}"))
-            throw new IllegalArgumentException("Invalid interaction token");
+        return replyInteraction(id, interactionToken, content, false);
+    }
+    int replyInteraction(String id, String interactionToken, String content, boolean ephemeral) {
         HttpResponse<String> r = request("POST", "interactions/" + snowflake(id) + "/"
-            + interactionToken + "/callback", replyPayload(content), false);
+            + interactionToken(interactionToken) + "/callback", replyPayload(content, ephemeral), false);
         check(r);
         return r.statusCode();
+    }
+    int deferInteraction(String id, String token, boolean ephemeral) {
+        HttpResponse<String> r = request("POST", "interactions/" + snowflake(id) + "/"
+            + interactionToken(token) + "/callback", deferPayload(ephemeral), false);
+        check(r);
+        return r.statusCode();
+    }
+    int followupInteraction(String token, String content, boolean ephemeral) {
+        return followupInteraction(OWCordExtension.requiredEnv("DISCORD_APPLICATION_ID"), token, content, ephemeral);
+    }
+    int followupInteraction(String applicationId, String token, String content, boolean ephemeral) {
+        HttpResponse<String> r = request("POST", "webhooks/" + snowflake(applicationId) + "/"
+            + interactionToken(token), followupPayload(content, ephemeral), false);
+        check(r);
+        return r.statusCode();
+    }
+    static String interactionToken(String token) {
+        if (token == null || !token.matches("[A-Za-z0-9_.-]{1,512}"))
+            throw new IllegalArgumentException("Invalid interaction token");
+        return token;
     }
     int sendMessage(String channel, String content) {
         HttpResponse<String> r = request("POST", "channels/" + snowflake(channel)
@@ -82,8 +103,25 @@ final class DiscordRest {
             "allowed_mentions", Map.of("parse", List.of())));
     }
     static String replyPayload(String content) {
-        return Json.write(Map.of("type", 4, "data",
-            Map.of("content", content(content), "allowed_mentions", Map.of("parse", List.of()))));
+        return replyPayload(content, false);
+    }
+    static String replyPayload(String content, boolean ephemeral) {
+        return Json.write(Map.of("type", 4, "data", followupData(content, ephemeral)));
+    }
+    static String deferPayload(boolean ephemeral) {
+        if (ephemeral)
+            return Json.write(Map.of("type", 5, "data", Map.of("flags", 64)));
+        return Json.write(Map.of("type", 5));
+    }
+    static String followupPayload(String content, boolean ephemeral) {
+        return Json.write(followupData(content, ephemeral));
+    }
+    private static Map<String, Object> followupData(String value, boolean ephemeral) {
+        if (ephemeral)
+            return Map.of("content", content(value), "flags", 64,
+                "allowed_mentions", Map.of("parse", List.of()));
+        return Map.of("content", content(value),
+            "allowed_mentions", Map.of("parse", List.of()));
     }
     private static String content(String content) {
         if (content == null || content.length() > 2000)
