@@ -23,7 +23,12 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.guild.member", "owcord.guild.members", "owcord.guild.channel_create",
         "owcord.channel.edit", "owcord.channel.delete", "owcord.guild.role_create",
         "owcord.guild.role_edit", "owcord.guild.role_delete",
-        "owcord.guild.member_role_add", "owcord.guild.member_role_remove");
+        "owcord.guild.member_role_add", "owcord.guild.member_role_remove",
+        "owcord.permissions.effective", "owcord.permissions.can_moderate",
+        "owcord.permissions.role_manageable", "owcord.moderation.kick",
+        "owcord.moderation.ban", "owcord.moderation.unban",
+        "owcord.moderation.timeout", "owcord.moderation.clear_timeout",
+        "owcord.test.application_id");
     private DiscordRest rest;
     private DiscordGateway gateway;
 
@@ -46,12 +51,16 @@ public final class OWCordExtension implements RuntimeExtension {
                  "owcord.rest.dev_command_permissions", "owcord.rest.autocomplete",
                  "owcord.rest.message_edit", "owcord.rest.reaction_add",
                  "owcord.rest.reaction_remove", "owcord.guild.members",
-                 "owcord.guild.role_create", "owcord.guild.role_delete" -> 3;
+                 "owcord.guild.role_create", "owcord.guild.role_delete",
+                 "owcord.moderation.kick", "owcord.moderation.unban",
+                 "owcord.moderation.clear_timeout" -> 3;
             case "owcord.rest.dev_command_options", "owcord.rest.message_list",
                  "owcord.guild.channel_create", "owcord.channel.edit",
                  "owcord.guild.role_edit", "owcord.guild.member_role_add",
-                 "owcord.guild.member_role_remove" -> 4;
-            case "owcord.rest.reaction_users" -> 5;
+                 "owcord.guild.member_role_remove", "owcord.permissions.effective",
+                 "owcord.permissions.role_manageable", "owcord.moderation.ban",
+                 "owcord.moderation.timeout" -> 4;
+            case "owcord.rest.reaction_users", "owcord.permissions.can_moderate" -> 5;
             default -> 0;
         };
         if (args.size() != required) throw new IllegalArgumentException("Wrong argument count for " + op);
@@ -121,6 +130,22 @@ public final class OWCordExtension implements RuntimeExtension {
                 arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
             case "owcord.guild.member_role_remove" -> rest().removeMemberRole(
                 arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
+            case "owcord.permissions.effective" -> DiscordAuthorization.effective(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
+            case "owcord.permissions.can_moderate" -> DiscordAuthorization.canModerate(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3), arg(args, 4)) ? 1 : 0;
+            case "owcord.permissions.role_manageable" -> DiscordAuthorization.roleManageable(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3)) ? 1 : 0;
+            case "owcord.moderation.kick" -> rest().kickMember(
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.moderation.ban" -> rest().banMember(
+                arg(args, 0), arg(args, 1), intArg(args, 2), arg(args, 3));
+            case "owcord.moderation.unban" -> rest().unbanMember(
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.moderation.timeout" -> rest().timeoutMember(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
+            case "owcord.moderation.clear_timeout" -> rest().clearMemberTimeout(
+                arg(args, 0), arg(args, 1), arg(args, 2));
             case "owcord.rest.reply_private" -> rest().replyInteraction(
                 arg(args, 0), arg(args, 1), arg(args, 2), true);
             case "owcord.rest.defer" -> {
@@ -144,6 +169,7 @@ public final class OWCordExtension implements RuntimeExtension {
                 arg(args, 0), arg(args, 1), arg(args, 2));
             case "owcord.test.channel_id" -> requiredEnv("DISCORD_TEST_CHANNEL_ID");
             case "owcord.test.guild_id" -> requiredEnv("DISCORD_GUILD_ID");
+            case "owcord.test.application_id" -> requiredEnv("DISCORD_APPLICATION_ID");
             default -> throw new IllegalArgumentException("Unsupported operation");
         };
     }
