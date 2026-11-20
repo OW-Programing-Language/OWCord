@@ -162,3 +162,16 @@ updates and register global commands with installation/invocation contexts.
 
 See [the v0.10 guide](docs/COMPONENTS-V2-INTERACTIONS.md) and
 [the self-cleaning V2 demo](examples/components_v2_demo/main.ow).
+
+## v0.11 — Gateway intent profiles, bounded cache & typed events
+
+Configure `OWCORD_GATEWAY_INTENTS` using a numeric mask or readable names
+such as `GUILDS,GUILD_MESSAGES`. Enable an opt-in LRU+TTL cache with
+`OWCORD_CACHE_MODE=metadata` or `members`; the default `off` retains no
+Guild/Channel/Member metadata. Cache hits are explicitly partial and **must
+not be used for authorization**. The OW event parser now normalizes
+role/thread/reaction events and distinguishes absent content from explicitly
+empty partial message updates.
+
+Read [the v0.11 guide](docs/GATEWAY-INTENTS-CACHE-EVENTS.md) and
+[the read-only cache example](examples/gateway_cache/main.ow).

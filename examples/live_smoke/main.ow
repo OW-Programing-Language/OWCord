@@ -2,7 +2,7 @@
 # Uses a real bot token from the GitHub Actions secret, never from source code.
 # Creates/updates two slash commands and sends one marked message to a test channel.
 # Requires DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID, DISCORD_GUILD_ID,
-# DISCORD_TEST_CHANNEL_ID and OWCORD_GATEWAY_INTENTS=513.
+# DISCORD_TEST_CHANNEL_ID, named intents and metadata cache configuration.
 import "@flow/src/App.ow"
 import "../../src/gateway/api/GatewayApi.ow"
 import "../../src/gateway/infra/JvmGateway.ow"
@@ -184,6 +184,20 @@ main:
   call: assert(v2_fetched.id == v2_id, "live v0.10: V2 message found")
   call: assert(bot.message_delete(channel, v2_id) == 204, "live v0.10: V2 cleanup")
   print: "LIVE PASS: v0.10 native OW Components V2 created, verified and deleted"
+
+  # v0.11: prove named intents and opt-in cache are configured on live bot.
+  # No privileged intents, member enumeration or server configuration changes.
+  set profile: bot.gateway_intents()
+  call: assert(profile.mask == 513, "live v0.11: named intents evaluated to 513")
+  call: assert(profile.portal_configuration_required == false, "live v0.11: no privileged intents")
+  set cache_info: bot.gateway_cache_stats()
+  call: assert(cache_info.mode == "metadata", "live v0.11: metadata cache enabled")
+  call: assert(cache_info.max_entries == 64, "live v0.11: bounded cache")
+  call: assert(cache_info.ttl_seconds == 120, "live v0.11: cache TTL")
+  set maybe_guild: bot.cached_guild(guild_id)
+  call: assert(map_has(maybe_guild, "found"), "live v0.11: cache exposes explicit hit/miss")
+  call: assert(bot.clear_gateway_cache() == 1, "live v0.11: explicit invalidation")
+  print: "LIVE PASS: v0.11 named intents, bounded cache and safe read-only introspection"
 
   call: assert(app.stop() == 1, "live v0.2: disconnect")
   print: "LIVE PASS: clean flOW shutdown"
