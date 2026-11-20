@@ -67,7 +67,11 @@ final class DiscordGuildModel {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", id(obj, "id"));
         out.put("name", string(obj, "name"));
-        out.put("permissions", DiscordPermissions.parse(string(obj, "permissions")).toString());
+        try {
+            out.put("permissions", DiscordPermissions.parse(string(obj, "permissions")).toString());
+        } catch (IllegalArgumentException malformed) {
+            throw new IllegalStateException("Malformed Discord role permissions", malformed);
+        }
         out.put("position", optionalNumber(obj, "position"));
         out.put("managed", Boolean.TRUE.equals(obj.get("managed")));
         out.put("mentionable", Boolean.TRUE.equals(obj.get("mentionable")));
