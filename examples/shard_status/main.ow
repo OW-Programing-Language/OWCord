@@ -1,0 +1,22 @@
+# OWCord v0.12 read-only shard configuration and health check.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "sharding: flOW boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+  set config: bot.shard_config()
+  print: "Total configured Gateway shards: " + str(config.total_shards)
+  set state: bot.shard_status()
+  print: "Assigned local shards: " + str(state.local_shard_count)
+  print: "All assigned shards READY: " + str(state.all_ready)
+  call: assert(app.stop() == 1, "sharding: clean shutdown")
