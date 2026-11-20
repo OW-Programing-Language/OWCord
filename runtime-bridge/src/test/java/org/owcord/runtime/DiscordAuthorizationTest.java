@@ -69,7 +69,7 @@ class DiscordAuthorizationTest {
         assertThrows(IllegalStateException.class, () -> DiscordAuthorization.effective(
             guild(), member(ACTOR,List.of("444"),""),
             Json.write(Map.of("id","777","guild_id",G,"overwrites_complete",false,
-                "permission_overwrites",List.of())), roles("0","8","0",5)));
+                "permission_overwrites",List.of())), roles("0","0","0",5)));
         assertThrows(IllegalStateException.class, () -> DiscordAuthorization.effective(
             guild(), member(ACTOR,List.of("9999"),""), channel(List.of()),
             roles("3072","0","0",5)));
