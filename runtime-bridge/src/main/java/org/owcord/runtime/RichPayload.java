@@ -85,7 +85,7 @@ final class RichPayload {
         return safe;
     }
 
-    private static Map<String, Object> messageRow(Object rawRow) {
+    static Map<String, Object> messageRow(Object rawRow) {
         Map<?, ?> row = asMap(rawRow);
         numericType(row, 1);
         List<?> components = list(row, "components", 1, 5);
