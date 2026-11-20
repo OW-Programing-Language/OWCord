@@ -121,7 +121,6 @@ final class DiscordAuthorization {
         if (!granted.equals(ALL) && !granted.and(BigInteger.ONE.shiftLeft(28))
                                            .equals(BigInteger.ONE.shiftLeft(28)))
             return false;
-        if (actorId.equals(id(guild, "owner_id"))) return true;
         Map<String, Integer> positions = rolePositions(roles);
         Integer targetPosition = positions.get(wanted);
         if (targetPosition == null) throw new IllegalArgumentException("Unknown target role");
@@ -130,6 +129,7 @@ final class DiscordAuthorization {
             if (wanted.equals(id(role, "id")) && Boolean.TRUE.equals(role.get("managed")))
                 return false; // managed integration roles are never assignable
         }
+        if (actorId.equals(id(guild, "owner_id"))) return true;
         return topPosition(actor, positions) > targetPosition;
     }
 
