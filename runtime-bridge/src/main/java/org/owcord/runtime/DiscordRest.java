@@ -278,6 +278,47 @@ final class DiscordRest {
         return r.statusCode();
     }
 
+    // Moderation operations always carry an explicit validated audit reason.
+    // Discord remains authoritative for bot permissions, guild ownership and
+    // role hierarchy; this transport does not attempt to bypass these checks.
+    int kickMember(String guildId, String userId, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/members/" + snowflake(userId);
+        HttpResponse<String> r = request("DELETE", path, "", true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
+    int banMember(String guildId, String userId, int deleteMessageSeconds, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/bans/" + snowflake(userId);
+        HttpResponse<String> r = request("PUT", path,
+            DiscordModerationPayload.ban(deleteMessageSeconds), true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
+    int unbanMember(String guildId, String userId, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/bans/" + snowflake(userId);
+        HttpResponse<String> r = request("DELETE", path, "", true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
+    String timeoutMember(String guildId, String userId, String untilIso, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/members/" + snowflake(userId);
+        HttpResponse<String> r = request("PATCH", path,
+            DiscordModerationPayload.timeout(untilIso), true, reason);
+        check(r);
+        return DiscordGuildModel.member(r.body());
+    }
+
+    String clearMemberTimeout(String guildId, String userId, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/members/" + snowflake(userId);
+        HttpResponse<String> r = request("PATCH", path,
+            DiscordModerationPayload.clearTimeout(), true, reason);
+        check(r);
+        return DiscordGuildModel.member(r.body());
+    }
+
     static String reactionPath(String channel, String messageId, String emoji) {
         if (emoji == null || emoji.isBlank() || emoji.length() > 100)
             throw new IllegalArgumentException("Emoji must be nonempty and at most 100 characters");
