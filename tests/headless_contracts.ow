@@ -114,6 +114,23 @@ module OWCord.MockRest: DISCORD_REST
   fn guild_member_role_remove(guild_id string, user_id string, role_id string, reason string) -> int:
     return: 204
 
+  fn permission_effective(guild_json string, member_json string, channel_json string, roles_json string) -> string:
+    return: "1024"
+  fn permission_can_moderate(guild_json string, actor_json string, target_json string, roles_json string, action string) -> int:
+    return: 204
+  fn permission_role_manageable(guild_json string, actor_json string, role_id string, roles_json string) -> int:
+    return: 204
+  fn moderation_kick(guild_id string, user_id string, reason string) -> int:
+    return: 204
+  fn moderation_ban(guild_id string, user_id string, delete_message_seconds int, reason string) -> int:
+    return: 204
+  fn moderation_unban(guild_id string, user_id string, reason string) -> int:
+    return: 204
+  fn moderation_timeout(guild_id string, user_id string, until_iso string, reason string) -> string:
+    return: "{\"user_id\":\"222\",\"nick\":\"\",\"joined_at\":\"\",\"roles\":[\"444\"],\"pending\":false,\"communication_disabled_until\":\"\"}"
+  fn moderation_clear_timeout(guild_id string, user_id string, reason string) -> string:
+    return: "{\"user_id\":\"222\",\"nick\":\"\",\"joined_at\":\"\",\"roles\":[\"444\"],\"pending\":false,\"communication_disabled_until\":\"\"}"
+
 main:
   set app: new App()
   call: app.use_native_as(OWCord.MockGateway, "DISCORD_GATEWAY")

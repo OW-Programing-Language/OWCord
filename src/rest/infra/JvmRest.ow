@@ -87,3 +87,19 @@ module OWCord.JvmRest: DISCORD_REST
     return: extension("owcord.guild.member_role_add", guild_id, user_id, role_id, reason)
   fn guild_member_role_remove(guild_id string, user_id string, role_id string, reason string) -> int:
     return: extension("owcord.guild.member_role_remove", guild_id, user_id, role_id, reason)
+  fn permission_effective(guild_json string, member_json string, channel_json string, roles_json string) -> string:
+    return: extension("owcord.permissions.effective", guild_json, member_json, channel_json, roles_json)
+  fn permission_can_moderate(guild_json string, actor_json string, target_json string, roles_json string, action string) -> int:
+    return: extension("owcord.permissions.can_moderate", guild_json, actor_json, target_json, roles_json, action)
+  fn permission_role_manageable(guild_json string, actor_json string, role_id string, roles_json string) -> int:
+    return: extension("owcord.permissions.role_manageable", guild_json, actor_json, role_id, roles_json)
+  fn moderation_kick(guild_id string, user_id string, reason string) -> int:
+    return: extension("owcord.moderation.kick", guild_id, user_id, reason)
+  fn moderation_ban(guild_id string, user_id string, delete_message_seconds int, reason string) -> int:
+    return: extension("owcord.moderation.ban", guild_id, user_id, delete_message_seconds, reason)
+  fn moderation_unban(guild_id string, user_id string, reason string) -> int:
+    return: extension("owcord.moderation.unban", guild_id, user_id, reason)
+  fn moderation_timeout(guild_id string, user_id string, until_iso string, reason string) -> string:
+    return: extension("owcord.moderation.timeout", guild_id, user_id, until_iso, reason)
+  fn moderation_clear_timeout(guild_id string, user_id string, reason string) -> string:
+    return: extension("owcord.moderation.clear_timeout", guild_id, user_id, reason)

@@ -37,3 +37,11 @@ module_type DISCORD_REST:
   fn guild_role_delete(guild_id string, role_id string, reason string) -> int
   fn guild_member_role_add(guild_id string, user_id string, role_id string, reason string) -> int
   fn guild_member_role_remove(guild_id string, user_id string, role_id string, reason string) -> int
+  fn permission_effective(guild_json string, member_json string, channel_json string, roles_json string) -> string
+  fn permission_can_moderate(guild_json string, actor_json string, target_json string, roles_json string, action string) -> int
+  fn permission_role_manageable(guild_json string, actor_json string, role_id string, roles_json string) -> int
+  fn moderation_kick(guild_id string, user_id string, reason string) -> int
+  fn moderation_ban(guild_id string, user_id string, delete_message_seconds int, reason string) -> int
+  fn moderation_unban(guild_id string, user_id string, reason string) -> int
+  fn moderation_timeout(guild_id string, user_id string, until_iso string, reason string) -> string
+  fn moderation_clear_timeout(guild_id string, user_id string, reason string) -> string
