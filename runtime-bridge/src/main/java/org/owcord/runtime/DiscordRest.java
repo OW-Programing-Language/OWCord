@@ -417,14 +417,19 @@ final class DiscordRest {
         HttpRequest.Builder b = HttpRequest.newBuilder(base.resolve(path))
             .timeout(Duration.ofSeconds(12))
             .header("Accept", "application/json")
-            .header("User-Agent", "OWCord/0.8 (https://github.com/OW-Programing-Language/OWCord)");
+            .header("User-Agent", "OWCord/0.9 (https://github.com/OW-Programing-Language/OWCord)");
         if (auth) b.header("Authorization", "Bot " + token);
         if (!encodedAuditReason.isEmpty()) b.header("X-Audit-Log-Reason", encodedAuditReason);
         switch (method) {
             case "POST", "PATCH" -> b.header("Content-Type", "application/json")
                 .method(method, HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
             case "GET" -> b.GET();
-            case "PUT" -> b.PUT(HttpRequest.BodyPublishers.noBody());
+            case "PUT" -> {
+                if (json != null && !json.isEmpty())
+                    b.header("Content-Type", "application/json")
+                        .PUT(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+                else b.PUT(HttpRequest.BodyPublishers.noBody());
+            }
             case "DELETE" -> b.DELETE();
             default -> throw new IllegalArgumentException("Unsupported Discord HTTP method");
         }
