@@ -59,6 +59,31 @@ final class DiscordGuildModel {
         out.put("type", optionalNumber(obj, "type"));
         out.put("position", optionalNumber(obj, "position"));
         out.put("nsfw", Boolean.TRUE.equals(obj.get("nsfw")));
+        // Some obfuscated/partial responses lack overwrites. Track this
+        // explicitly so authorization refuses to guess rather than granting.
+        boolean complete = obj.get("permission_overwrites") instanceof List<?>;
+        out.put("overwrites_complete", complete);
+        List<Object> overwrites = new ArrayList<>();
+        if (complete) {
+            List<?> raw = (List<?>) obj.get("permission_overwrites");
+            if (raw.size() > 1000) throw new IllegalStateException("Too many channel overwrites");
+            for (Object entry : raw) {
+                Map<?, ?> item = object(entry);
+                Map<String, Object> overwrite = new LinkedHashMap<>();
+                overwrite.put("id", id(item, "id"));
+                int type = optionalNumber(item, "type");
+                if (type != 0 && type != 1) throw new IllegalStateException("Invalid channel overwrite type");
+                overwrite.put("type", type);
+                try {
+                    overwrite.put("allow", DiscordPermissions.parse(string(item, "allow")).toString());
+                    overwrite.put("deny", DiscordPermissions.parse(string(item, "deny")).toString());
+                } catch (IllegalArgumentException bad) {
+                    throw new IllegalStateException("Malformed channel overwrite permissions", bad);
+                }
+                overwrites.add(overwrite);
+            }
+        }
+        out.put("permission_overwrites", overwrites);
         return out;
     }
 
@@ -95,6 +120,7 @@ final class DiscordGuildModel {
         out.put("joined_at", string(obj, "joined_at"));
         out.put("roles", roleIds);
         out.put("pending", Boolean.TRUE.equals(obj.get("pending")));
+        out.put("communication_disabled_until", string(obj, "communication_disabled_until"));
         return out;
     }
 
