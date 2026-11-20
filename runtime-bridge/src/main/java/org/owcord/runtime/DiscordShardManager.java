@@ -34,6 +34,7 @@ final class DiscordShardManager implements AutoCloseable {
         this.assignment=assignment;
         this.cacheConfig=cacheConfig;
     }
+    int requestedIntents() { return intents; }
     synchronized int connect() {
         if (started) return 1;
         GatewayBotInfo info=rest.gatewayBotInfo();

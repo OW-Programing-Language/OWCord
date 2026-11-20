@@ -36,9 +36,10 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.rest.global_context_command",
         "owcord.gateway.intents", "owcord.gateway.cache_stats",
         "owcord.gateway.cache_guild", "owcord.gateway.cache_channel",
-        "owcord.gateway.cache_member", "owcord.gateway.cache_clear");
+        "owcord.gateway.cache_member", "owcord.gateway.cache_clear",
+        "owcord.gateway.shard_config", "owcord.gateway.shard_status");
     private DiscordRest rest;
-    private DiscordGateway gateway;
+    private DiscordShardManager gateway;
 
     @Override public boolean supports(String op) { return METHODS.contains(op); }
 
@@ -81,7 +82,8 @@ public final class OWCordExtension implements RuntimeExtension {
         if (args.size() != required) throw new IllegalArgumentException("Wrong argument count for " + op);
         return switch (op) {
             case "owcord.gateway.connect" -> {
-                if (gateway == null) gateway = new DiscordGateway(rest(), intents());
+                if (gateway == null) gateway = new DiscordShardManager(rest(), intents(),
+                    GatewayShardConfig.fromEnvironment(), GatewayEventCache.Config.fromEnvironment());
                 yield gateway.connect();
             }
             case "owcord.gateway.connected" -> gateway != null && gateway.isReady() ? 1 : 0;
@@ -94,14 +96,15 @@ public final class OWCordExtension implements RuntimeExtension {
                 if (gateway != null) { gateway.close(); gateway = null; }
                 yield 1;
             }
-            case "owcord.gateway.intents" -> GatewayIntents.describe(
-                gateway == null ? intents() : gateway.requestedIntents());
-            case "owcord.gateway.cache_stats" -> activeGateway().cache().stats();
-            case "owcord.gateway.cache_guild" -> activeGateway().cache().getGuild(arg(args, 0));
-            case "owcord.gateway.cache_channel" -> activeGateway().cache().getChannel(arg(args, 0));
-            case "owcord.gateway.cache_member" -> activeGateway().cache().getMember(
+            case "owcord.gateway.intents" -> GatewayIntents.describe(intents());
+            case "owcord.gateway.cache_stats" -> activeGateway().cacheStats();
+            case "owcord.gateway.cache_guild" -> activeGateway().cacheGuild(arg(args, 0));
+            case "owcord.gateway.cache_channel" -> activeGateway().cacheChannel(arg(args, 0));
+            case "owcord.gateway.cache_member" -> activeGateway().cacheMember(
                 arg(args, 0), arg(args, 1));
-            case "owcord.gateway.cache_clear" -> activeGateway().cache().clear();
+            case "owcord.gateway.cache_clear" -> activeGateway().cacheClear();
+            case "owcord.gateway.shard_config" -> GatewayShardConfig.fromEnvironment().summary();
+            case "owcord.gateway.shard_status" -> activeGateway().status();
             case "owcord.rest.dev_command" -> rest().registerGuildCommand(
                 requiredEnv("DISCORD_APPLICATION_ID"), requiredEnv("DISCORD_GUILD_ID"),
                 arg(args, 0), arg(args, 1));
@@ -247,7 +250,7 @@ public final class OWCordExtension implements RuntimeExtension {
     private static int intents() {
         return GatewayIntents.parse(System.getenv().getOrDefault("OWCORD_GATEWAY_INTENTS", "GUILDS"));
     }
-    private DiscordGateway activeGateway() {
+    private DiscordShardManager activeGateway() {
         if (gateway == null) throw new IllegalStateException("Gateway is not connected");
         return gateway;
     }
