@@ -152,3 +152,13 @@ The OW API also exposes audited kick, ban/unban and timeout/remove-timeout
 methods with validated arguments. No real moderation is performed in the live
 test. See [Moderation and permission guide](docs/MODERATION-PERMISSIONS.md)
 and [read-only inspector](examples/moderation_inspect/main.ow).
+
+## v0.10 — Components V2 & Interaction Lifecycle
+
+Pure-OW builders now support Discord Components V2 panels, text displays,
+sections, separators, thumbnails and media galleries (validated at the Java
+bridge). Manage interaction original/follow-up messages, defer component
+updates and register global commands with installation/invocation contexts.
+
+See [the v0.10 guide](docs/COMPONENTS-V2-INTERACTIONS.md) and
+[the self-cleaning V2 demo](examples/components_v2_demo/main.ow).

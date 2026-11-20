@@ -170,6 +170,21 @@ main:
   call: assert(bot.can_moderate(guild_id, bot_id, bot_id, "kick") == 0, "live v0.9: cannot kick self")
   print: "LIVE PASS: v0.9 read-only permission calculation and self-moderation denial"
 
+  # v0.10 Components V2: bot-owned temp message only, no global commands.
+  set v2_card: ui.v2_container([
+    ui.v2_text("## OWCord v0.10"),
+    ui.v2_separator(true, 1),
+    ui.v2_section([ui.v2_text("Components V2 is active!")],
+      ui.button("owcord10_verify", "Verify", 1))
+  ], 5793266)
+  set v2_data: ui.v2_message([v2_card])
+  set v2_id: bot.v2_create(channel, v2_data)
+  call: assert(v2_id != "", "live v0.10: V2 message created")
+  set v2_fetched: bot.message_get(channel, v2_id)
+  call: assert(v2_fetched.id == v2_id, "live v0.10: V2 message found")
+  call: assert(bot.message_delete(channel, v2_id) == 204, "live v0.10: V2 cleanup")
+  print: "LIVE PASS: v0.10 native OW Components V2 created, verified and deleted"
+
   call: assert(app.stop() == 1, "live v0.2: disconnect")
   print: "LIVE PASS: clean flOW shutdown"
   print: "LIVE V0.2 COMPLETE: real Discord Gateway, OW event parsing, command registration and message delivery"
