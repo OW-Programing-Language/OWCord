@@ -8,3 +8,5 @@ module_type DISCORD_GATEWAY:
   fn cache_channel(id string) -> string
   fn cache_member(guild_id string, user_id string) -> string
   fn cache_clear() -> int
+  fn shard_config() -> string
+  fn shard_status() -> string
