@@ -20,6 +20,16 @@ final class DiscordRateLimiter {
 
     /** Hide interaction tokens and interaction snowflakes from in-memory route keys. */
     static String routeKey(String method, String path) {
+        // Do not retain message IDs or pagination cursors as unique bucket keys.
+        String clean = path.split("\\?", 2)[0];
+        if (clean.matches("channels/[0-9]+/messages"))
+            return method + " channels/*/messages";
+        if (clean.matches("channels/[0-9]+/messages/[0-9]+"))
+            return method + " channels/*/messages/*";
+        if (clean.matches("channels/[0-9]+/messages/[0-9]+/reactions/[^/]+(?:/@me)?")) {
+            return method + " channels/*/messages/*/reactions/*" +
+                (clean.endsWith("/@me") ? "/@me" : "");
+        }
         if (path.matches("interactions/[0-9]+/[^/]+/callback"))
             return method + " interactions/*/callback";
         if (path.matches("webhooks/[0-9]+/[^/]+"))

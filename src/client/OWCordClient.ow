@@ -105,3 +105,29 @@ class OWCordClient:
   # Callback type 8; autocomplete interactions must not receive a normal reply.
   fn autocomplete(event, choices):
     return: this.rest.autocomplete(event.id, event.token, json(choices))
+
+  # v0.7: exact snowflake IDs are strings, never OW floating-point numbers.
+  fn message_create(channel_id, content):
+    return: this.rest.message_create(channel_id, content)
+
+  fn message_get(channel_id, message_id):
+    return: json_parse(this.rest.message_get(channel_id, message_id))
+
+  # cursor "" means the first page; direction is "before" or "after".
+  fn message_list(channel_id, cursor, direction, limit):
+    return: json_parse(this.rest.message_list(channel_id, cursor, direction, limit))
+
+  fn message_edit(channel_id, message_id, content):
+    return: json_parse(this.rest.message_edit(channel_id, message_id, content))
+
+  fn message_delete(channel_id, message_id):
+    return: this.rest.message_delete(channel_id, message_id)
+
+  fn reaction_add(channel_id, message_id, emoji):
+    return: this.rest.reaction_add(channel_id, message_id, emoji)
+
+  fn reaction_remove(channel_id, message_id, emoji):
+    return: this.rest.reaction_remove(channel_id, message_id, emoji)
+
+  fn reaction_users(channel_id, message_id, emoji, after, limit):
+    return: json_parse(this.rest.reaction_users(channel_id, message_id, emoji, after, limit))

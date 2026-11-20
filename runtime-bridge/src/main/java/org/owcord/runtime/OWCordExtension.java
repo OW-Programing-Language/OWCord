@@ -15,7 +15,10 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.rest.send_rich", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
         "owcord.rest.update_component", "owcord.rest.open_modal",
         "owcord.rest.dev_command_permissions", "owcord.permissions.has",
-        "owcord.rest.dev_command_options", "owcord.rest.autocomplete");
+        "owcord.rest.dev_command_options", "owcord.rest.autocomplete",
+        "owcord.rest.message_create", "owcord.rest.message_get", "owcord.rest.message_list",
+        "owcord.rest.message_edit", "owcord.rest.message_delete",
+        "owcord.rest.reaction_add", "owcord.rest.reaction_remove", "owcord.rest.reaction_users");
     private DiscordRest rest;
     private DiscordGateway gateway;
 
@@ -27,12 +30,17 @@ public final class OWCordExtension implements RuntimeExtension {
             case "owcord.gateway.poll" -> 1;
             case "owcord.rest.dev_command", "owcord.rest.message",
                  "owcord.rest.followup", "owcord.rest.followup_private",
-                 "owcord.rest.send_rich", "owcord.permissions.has" -> 2;
+                 "owcord.rest.send_rich", "owcord.permissions.has",
+                 "owcord.rest.message_create", "owcord.rest.message_get",
+                 "owcord.rest.message_delete" -> 2;
             case "owcord.rest.reply", "owcord.rest.reply_private",
                  "owcord.rest.defer", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
                  "owcord.rest.update_component", "owcord.rest.open_modal",
-                 "owcord.rest.dev_command_permissions", "owcord.rest.autocomplete" -> 3;
-            case "owcord.rest.dev_command_options" -> 4;
+                 "owcord.rest.dev_command_permissions", "owcord.rest.autocomplete",
+                 "owcord.rest.message_edit", "owcord.rest.reaction_add",
+                 "owcord.rest.reaction_remove" -> 3;
+            case "owcord.rest.dev_command_options", "owcord.rest.message_list" -> 4;
+            case "owcord.rest.reaction_users" -> 5;
             default -> 0;
         };
         if (args.size() != required) throw new IllegalArgumentException("Wrong argument count for " + op);
@@ -66,6 +74,19 @@ public final class OWCordExtension implements RuntimeExtension {
             case "owcord.rest.reply" -> rest().replyInteraction(
                 arg(args, 0), arg(args, 1), arg(args, 2));
             case "owcord.rest.message" -> rest().sendMessage(arg(args, 0), arg(args, 1));
+            case "owcord.rest.message_create" -> rest().createMessage(arg(args, 0), arg(args, 1));
+            case "owcord.rest.message_get" -> rest().getMessage(arg(args, 0), arg(args, 1));
+            case "owcord.rest.message_list" -> rest().listMessages(
+                arg(args, 0), arg(args, 1), arg(args, 2), intArg(args, 3));
+            case "owcord.rest.message_edit" -> rest().editMessage(
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.rest.message_delete" -> rest().deleteMessage(arg(args, 0), arg(args, 1));
+            case "owcord.rest.reaction_add" -> rest().addReaction(
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.rest.reaction_remove" -> rest().deleteOwnReaction(
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.rest.reaction_users" -> rest().reactionUsers(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3), intArg(args, 4));
             case "owcord.rest.reply_private" -> rest().replyInteraction(
                 arg(args, 0), arg(args, 1), arg(args, 2), true);
             case "owcord.rest.defer" -> {
@@ -103,6 +124,14 @@ public final class OWCordExtension implements RuntimeExtension {
             throw new IllegalArgumentException("Argument " + index + " must be a string");
         return value;
     }
+    private static int intArg(List<Object> args, int index) {
+        Object value = args.get(index);
+        if (!(value instanceof Number n) || n.doubleValue() != Math.rint(n.doubleValue()) ||
+            n.doubleValue() < Integer.MIN_VALUE || n.doubleValue() > Integer.MAX_VALUE)
+            throw new IllegalArgumentException("Argument " + index + " must be an integer");
+        return n.intValue();
+    }
+
     private static int intents() {
         try {
             int result = Integer.parseInt(System.getenv().getOrDefault("OWCORD_GATEWAY_INTENTS", "1"));

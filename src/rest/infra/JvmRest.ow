@@ -43,3 +43,19 @@ module OWCord.JvmRest: DISCORD_REST
     return: extension("owcord.rest.dev_command_options", name, description, options_json, permissions)
   fn autocomplete(interaction_id string, interaction_token string, choices_json string) -> int:
     return: extension("owcord.rest.autocomplete", interaction_id, interaction_token, choices_json)
+  fn message_create(channel_id string, content string) -> string:
+    return: extension("owcord.rest.message_create", channel_id, content)
+  fn message_get(channel_id string, message_id string) -> string:
+    return: extension("owcord.rest.message_get", channel_id, message_id)
+  fn message_list(channel_id string, cursor string, direction string, limit int) -> string:
+    return: extension("owcord.rest.message_list", channel_id, cursor, direction, limit)
+  fn message_edit(channel_id string, message_id string, content string) -> string:
+    return: extension("owcord.rest.message_edit", channel_id, message_id, content)
+  fn message_delete(channel_id string, message_id string) -> int:
+    return: extension("owcord.rest.message_delete", channel_id, message_id)
+  fn reaction_add(channel_id string, message_id string, emoji string) -> int:
+    return: extension("owcord.rest.reaction_add", channel_id, message_id, emoji)
+  fn reaction_remove(channel_id string, message_id string, emoji string) -> int:
+    return: extension("owcord.rest.reaction_remove", channel_id, message_id, emoji)
+  fn reaction_users(channel_id string, message_id string, emoji string, after string, limit int) -> string:
+    return: extension("owcord.rest.reaction_users", channel_id, message_id, emoji, after, limit)
