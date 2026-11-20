@@ -68,6 +68,22 @@ module OWCord.MockRest: DISCORD_REST
     return: 204
   fn open_modal(interaction_id string, interaction_token string, modal_json string) -> int:
     return: 204
+  fn message_create(channel_id string, content string) -> string:
+    return: "12345"
+  fn message_get(channel_id string, message_id string) -> string:
+    return: "{\"id\":\"12345\",\"channel_id\":\"55\",\"content\":\"hello\",\"author_id\":\"66\",\"timestamp\":\"\",\"edited_timestamp\":\"\",\"pinned\":false}"
+  fn message_list(channel_id string, cursor string, direction string, limit int) -> string:
+    return: "[]"
+  fn message_edit(channel_id string, message_id string, content string) -> string:
+    return: "{\"id\":\"12345\",\"channel_id\":\"55\",\"content\":\"edited\",\"author_id\":\"66\",\"timestamp\":\"\",\"edited_timestamp\":\"\",\"pinned\":false}"
+  fn message_delete(channel_id string, message_id string) -> int:
+    return: 204
+  fn reaction_add(channel_id string, message_id string, emoji string) -> int:
+    return: 204
+  fn reaction_remove(channel_id string, message_id string, emoji string) -> int:
+    return: 204
+  fn reaction_users(channel_id string, message_id string, emoji string, after string, limit int) -> string:
+    return: "[]"
 
 main:
   set app: new App()

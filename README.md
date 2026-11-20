@@ -126,3 +126,14 @@ See [v0.5 permissions and event guide](docs/PERMISSIONS-EVENTS.md) and [the rest
 OWCord now supports OW-native option builders (string/integer/boolean/user/channel/role/number/attachment), one-level grouped subcommands, nested handler labels and type-8 Discord autocomplete callbacks. The JVM bridge validates schemas and limits before registering commands; the public OW application API is unchanged by future transport implementations.
 
 Read the [advanced commands guide](docs/ADVANCED-COMMANDS.md) and try [the interactive example](examples/advanced_commands/main.ow). The existing `/ping`, `/hello` and component APIs remain supported.
+
+## v0.7 — messages and reactions
+
+OWCord v0.7 introduces `bot.message_create`, `message_get`, `message_list`,
+`message_edit`, `message_delete`, and own `reaction_add`/`reaction_remove`
+plus paginated `reaction_users`. Message and user snowflakes are always exact
+strings; the JVM REST bridge validates IDs, pagination and emoji paths.
+
+Read the [message/reaction guide](docs/MESSAGES-REACTIONS.md). Local HTTP tests
+exercise the full lifecycle and the existing secret-backed development-guild
+smoke test creates and cleans up its own test message.

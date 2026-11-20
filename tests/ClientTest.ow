@@ -103,6 +103,32 @@ class FakeRest:
     set this.last_reply: modal_json
     return: 204
 
+  fn message_create(channel_id, content):
+    set this.last_message: content
+    return: "12345"
+
+  fn message_get(channel_id, message_id):
+    return: "{\"id\":\"12345\",\"channel_id\":\"55\",\"content\":\"hello\",\"author_id\":\"66\",\"timestamp\":\"\",\"edited_timestamp\":\"\",\"pinned\":false}"
+
+  fn message_list(channel_id, cursor, direction, limit):
+    return: "[{\"id\":\"12345\",\"channel_id\":\"55\",\"content\":\"hello\",\"author_id\":\"66\",\"timestamp\":\"\",\"edited_timestamp\":\"\",\"pinned\":false}]"
+
+  fn message_edit(channel_id, message_id, content):
+    set this.last_message: content
+    return: "{\"id\":\"12345\",\"channel_id\":\"55\",\"content\":\"edited\",\"author_id\":\"66\",\"timestamp\":\"\",\"edited_timestamp\":\"\",\"pinned\":false}"
+
+  fn message_delete(channel_id, message_id):
+    return: 204
+
+  fn reaction_add(channel_id, message_id, emoji):
+    return: 204
+
+  fn reaction_remove(channel_id, message_id, emoji):
+    return: 204
+
+  fn reaction_users(channel_id, message_id, emoji, after, limit):
+    return: "[\"66\"]"
+
 @Test
 fn syncsAndRoutesCommandsWithMockTransport():
   set gateway: new FakeGateway()
@@ -194,3 +220,27 @@ fn synchronizesTypedCommandsAndAutocompleteCallbacks():
   set choices: [{name: "Alpha", value: "alpha"}]
   call: assert(bot.autocomplete(event, choices) == 204)
   call: assert(json_parse(rest.last_autocomplete)[0].value == "alpha")
+
+
+@Test
+fn managesMessagesAndReactionsThroughFakeTransport():
+  set gateway: new FakeGateway()
+  set rest: new FakeRest()
+  set bot: new OWCordClient(gateway, rest)
+  set id: bot.message_create("55", "hello")
+  call: assert(id == "12345")
+  set msg: bot.message_get("55", id)
+  call: assert(msg.id == id)
+  call: assert(msg.content == "hello")
+  set page: bot.message_list("55", "", "before", 10)
+  call: assert(len(page) == 1)
+  call: assert(page[0].id == id)
+  set edited: bot.message_edit("55", id, "edited")
+  call: assert(edited.content == "edited")
+  call: assert(rest.last_message == "edited")
+  call: assert(bot.reaction_add("55", id, "👍") == 204)
+  set users: bot.reaction_users("55", id, "👍", "", 10)
+  call: assert(len(users) == 1)
+  call: assert(users[0] == "66")
+  call: assert(bot.reaction_remove("55", id, "👍") == 204)
+  call: assert(bot.message_delete("55", id) == 204)

@@ -116,6 +116,80 @@ final class DiscordRest {
         check(r);
         return r.statusCode();
     }
+    /** Create a plain-text message and return the exact Discord snowflake. */
+    String createMessage(String channel, String content) {
+        HttpResponse<String> r = request("POST", "channels/" + snowflake(channel) + "/messages",
+            messagePayload(content), true);
+        check(r);
+        return DiscordMessageModel.messageId(r.body());
+    }
+
+    String getMessage(String channel, String messageId) {
+        String path = "channels/" + snowflake(channel) + "/messages/" + snowflake(messageId);
+        HttpResponse<String> r = request("GET", path, "", true);
+        check(r);
+        return DiscordMessageModel.message(r.body());
+    }
+
+    String listMessages(String channel, String cursor, String direction, int limit) {
+        if (limit < 1 || limit > 100)
+            throw new IllegalArgumentException("Message page size must be 1-100");
+        if (!direction.equals("before") && !direction.equals("after"))
+            throw new IllegalArgumentException("Cursor direction must be before or after");
+        String path = "channels/" + snowflake(channel) + "/messages?limit=" + limit;
+        if (!cursor.isEmpty()) path += "&" + direction + "=" + snowflake(cursor);
+        HttpResponse<String> r = request("GET", path, "", true);
+        check(r);
+        return DiscordMessageModel.messages(r.body());
+    }
+
+    String editMessage(String channel, String messageId, String content) {
+        String path = "channels/" + snowflake(channel) + "/messages/" + snowflake(messageId);
+        HttpResponse<String> r = request("PATCH", path, messagePayload(content), true);
+        check(r);
+        return DiscordMessageModel.message(r.body());
+    }
+
+    int deleteMessage(String channel, String messageId) {
+        String path = "channels/" + snowflake(channel) + "/messages/" + snowflake(messageId);
+        HttpResponse<String> r = request("DELETE", path, "", true);
+        check(r);
+        return r.statusCode();
+    }
+
+    int addReaction(String channel, String messageId, String emoji) {
+        HttpResponse<String> r = request("PUT", reactionPath(channel, messageId, emoji) + "/@me", "", true);
+        check(r);
+        return r.statusCode();
+    }
+
+    int deleteOwnReaction(String channel, String messageId, String emoji) {
+        HttpResponse<String> r = request("DELETE", reactionPath(channel, messageId, emoji) + "/@me", "", true);
+        check(r);
+        return r.statusCode();
+    }
+
+    String reactionUsers(String channel, String messageId, String emoji, String after, int limit) {
+        if (limit < 1 || limit > 100)
+            throw new IllegalArgumentException("Reaction page size must be 1-100");
+        String path = reactionPath(channel, messageId, emoji) + "?limit=" + limit;
+        if (!after.isEmpty()) path += "&after=" + snowflake(after);
+        HttpResponse<String> r = request("GET", path, "", true);
+        check(r);
+        return DiscordMessageModel.users(r.body());
+    }
+
+    static String reactionPath(String channel, String messageId, String emoji) {
+        if (emoji == null || emoji.isBlank() || emoji.length() > 100)
+            throw new IllegalArgumentException("Emoji must be nonempty and at most 100 characters");
+        // Path-encode all Unicode bytes and custom emoji names (name:id), never
+        // allow an emoji string to inject a slash, query, or new endpoint.
+        String encoded = java.net.URLEncoder.encode(emoji, StandardCharsets.UTF_8)
+            .replace("+", "%20");
+        return "channels/" + snowflake(channel) + "/messages/" + snowflake(messageId)
+            + "/reactions/" + encoded;
+    }
+
     int replyRichInteraction(String id, String token, String payloadJson, boolean ephemeral) {
         HttpResponse<String> r = request("POST",
             "interactions/" + snowflake(id) + "/" + interactionToken(token) + "/callback",
@@ -198,9 +272,14 @@ final class DiscordRest {
             .header("Accept", "application/json")
             .header("User-Agent", "OWCord/0.4 (https://github.com/OW-Programing-Language/OWCord)");
         if (auth) b.header("Authorization", "Bot " + token);
-        if ("POST".equals(method)) b.header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
-        else b.GET();
+        switch (method) {
+            case "POST", "PATCH" -> b.header("Content-Type", "application/json")
+                .method(method, HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+            case "GET" -> b.GET();
+            case "PUT" -> b.PUT(HttpRequest.BodyPublishers.noBody());
+            case "DELETE" -> b.DELETE();
+            default -> throw new IllegalArgumentException("Unsupported Discord HTTP method");
+        }
         HttpRequest request = b.build();
 
         String route = DiscordRateLimiter.routeKey(method, path);
@@ -229,7 +308,7 @@ final class DiscordRest {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Discord request interrupted", e);
         } catch (IOException e) {
-            // A POST may already have been processed remotely: avoid duplication.
+            // A write may already have been processed remotely: avoid duplication.
             throw new IllegalStateException("Discord request failed without retry", e);
         }
     }
