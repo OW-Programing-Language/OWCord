@@ -34,6 +34,8 @@ class DiscordInteractionLifecycleTest {
             String response="";
             if (path.startsWith("/applications/")) {
                 status=201; response="{}";
+            } else if (path.startsWith("/interactions/")) {
+                status=204; response="";
             } else if (path.startsWith("/channels/")) {
                 status=201; response="{\"id\":\"333\",\"channel_id\":\"222\",\"content\":\"\"}";
             } else if (path.startsWith("/webhooks/") && method.equals("POST")) {
