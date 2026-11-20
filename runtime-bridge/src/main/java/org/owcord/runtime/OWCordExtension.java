@@ -9,7 +9,7 @@ public final class OWCordExtension implements RuntimeExtension {
     private static final Set<String> METHODS = Set.of(
         "owcord.gateway.connect", "owcord.gateway.connected", "owcord.gateway.poll",
         "owcord.gateway.disconnect", "owcord.rest.dev_command", "owcord.rest.reply",
-        "owcord.rest.message", "owcord.test.channel_id",
+        "owcord.rest.message", "owcord.test.channel_id", "owcord.test.guild_id",
         "owcord.rest.reply_private", "owcord.rest.defer",
         "owcord.rest.followup", "owcord.rest.followup_private",
         "owcord.rest.send_rich", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
@@ -143,6 +143,7 @@ public final class OWCordExtension implements RuntimeExtension {
             case "owcord.rest.open_modal" -> rest().openModal(
                 arg(args, 0), arg(args, 1), arg(args, 2));
             case "owcord.test.channel_id" -> requiredEnv("DISCORD_TEST_CHANNEL_ID");
+            case "owcord.test.guild_id" -> requiredEnv("DISCORD_GUILD_ID");
             default -> throw new IllegalArgumentException("Unsupported operation");
         };
     }
