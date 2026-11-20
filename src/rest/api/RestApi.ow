@@ -23,3 +23,17 @@ module_type DISCORD_REST:
   fn reaction_add(channel_id string, message_id string, emoji string) -> int
   fn reaction_remove(channel_id string, message_id string, emoji string) -> int
   fn reaction_users(channel_id string, message_id string, emoji string, after string, limit int) -> string
+  fn guild_get(guild_id string) -> string
+  fn guild_channels(guild_id string) -> string
+  fn channel_get(channel_id string) -> string
+  fn guild_roles(guild_id string) -> string
+  fn guild_member(guild_id string, user_id string) -> string
+  fn guild_members(guild_id string, after_id string, limit int) -> string
+  fn guild_channel_create(guild_id string, name string, topic string, reason string) -> string
+  fn channel_edit(channel_id string, name string, topic string, reason string) -> string
+  fn channel_delete(channel_id string, reason string) -> int
+  fn guild_role_create(guild_id string, name string, reason string) -> string
+  fn guild_role_edit(guild_id string, role_id string, name string, reason string) -> string
+  fn guild_role_delete(guild_id string, role_id string, reason string) -> int
+  fn guild_member_role_add(guild_id string, user_id string, role_id string, reason string) -> int
+  fn guild_member_role_remove(guild_id string, user_id string, role_id string, reason string) -> int

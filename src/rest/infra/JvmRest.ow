@@ -59,3 +59,31 @@ module OWCord.JvmRest: DISCORD_REST
     return: extension("owcord.rest.reaction_remove", channel_id, message_id, emoji)
   fn reaction_users(channel_id string, message_id string, emoji string, after string, limit int) -> string:
     return: extension("owcord.rest.reaction_users", channel_id, message_id, emoji, after, limit)
+  fn guild_get(guild_id string) -> string:
+    return: extension("owcord.guild.get", guild_id)
+  fn guild_channels(guild_id string) -> string:
+    return: extension("owcord.guild.channels", guild_id)
+  fn channel_get(channel_id string) -> string:
+    return: extension("owcord.channel.get", channel_id)
+  fn guild_roles(guild_id string) -> string:
+    return: extension("owcord.guild.roles", guild_id)
+  fn guild_member(guild_id string, user_id string) -> string:
+    return: extension("owcord.guild.member", guild_id, user_id)
+  fn guild_members(guild_id string, after_id string, limit int) -> string:
+    return: extension("owcord.guild.members", guild_id, after_id, limit)
+  fn guild_channel_create(guild_id string, name string, topic string, reason string) -> string:
+    return: extension("owcord.guild.channel_create", guild_id, name, topic, reason)
+  fn channel_edit(channel_id string, name string, topic string, reason string) -> string:
+    return: extension("owcord.channel.edit", channel_id, name, topic, reason)
+  fn channel_delete(channel_id string, reason string) -> int:
+    return: extension("owcord.channel.delete", channel_id, reason)
+  fn guild_role_create(guild_id string, name string, reason string) -> string:
+    return: extension("owcord.guild.role_create", guild_id, name, reason)
+  fn guild_role_edit(guild_id string, role_id string, name string, reason string) -> string:
+    return: extension("owcord.guild.role_edit", guild_id, role_id, name, reason)
+  fn guild_role_delete(guild_id string, role_id string, reason string) -> int:
+    return: extension("owcord.guild.role_delete", guild_id, role_id, reason)
+  fn guild_member_role_add(guild_id string, user_id string, role_id string, reason string) -> int:
+    return: extension("owcord.guild.member_role_add", guild_id, user_id, role_id, reason)
+  fn guild_member_role_remove(guild_id string, user_id string, role_id string, reason string) -> int:
+    return: extension("owcord.guild.member_role_remove", guild_id, user_id, role_id, reason)

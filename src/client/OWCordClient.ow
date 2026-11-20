@@ -131,3 +131,44 @@ class OWCordClient:
 
   fn reaction_users(channel_id, message_id, emoji, after, limit):
     return: json_parse(this.rest.reaction_users(channel_id, message_id, emoji, after, limit))
+  fn guild_get(guild_id):
+    return: json_parse(this.rest.guild_get(guild_id))
+
+  fn guild_channels(guild_id):
+    return: json_parse(this.rest.guild_channels(guild_id))
+
+  fn channel_get(channel_id):
+    return: json_parse(this.rest.channel_get(channel_id))
+
+  fn guild_roles(guild_id):
+    return: json_parse(this.rest.guild_roles(guild_id))
+
+  fn guild_member(guild_id, user_id):
+    return: json_parse(this.rest.guild_member(guild_id, user_id))
+
+  fn guild_members(guild_id, after_id, limit):
+    return: json_parse(this.rest.guild_members(guild_id, after_id, limit))
+
+  fn guild_channel_create(guild_id, name, topic, reason):
+    return: json_parse(this.rest.guild_channel_create(guild_id, name, topic, reason))
+
+  fn channel_edit(channel_id, name, topic, reason):
+    return: json_parse(this.rest.channel_edit(channel_id, name, topic, reason))
+
+  fn channel_delete(channel_id, reason):
+    return: this.rest.channel_delete(channel_id, reason)
+
+  fn guild_role_create(guild_id, name, reason):
+    return: json_parse(this.rest.guild_role_create(guild_id, name, reason))
+
+  fn guild_role_edit(guild_id, role_id, name, reason):
+    return: json_parse(this.rest.guild_role_edit(guild_id, role_id, name, reason))
+
+  fn guild_role_delete(guild_id, role_id, reason):
+    return: this.rest.guild_role_delete(guild_id, role_id, reason)
+
+  fn guild_member_role_add(guild_id, user_id, role_id, reason):
+    return: this.rest.guild_member_role_add(guild_id, user_id, role_id, reason)
+
+  fn guild_member_role_remove(guild_id, user_id, role_id, reason):
+    return: this.rest.guild_member_role_remove(guild_id, user_id, role_id, reason)
