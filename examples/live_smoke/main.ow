@@ -109,6 +109,43 @@ main:
   call: assert(received_rich == 1, "live v0.3: missing rich Gateway event")
   print: "LIVE PASS: Discord Gateway confirmed rich embed, button and select in MESSAGE_CREATE"
 
+  # v0.7 message/reaction lifecycle. Only mutate the message ID returned by
+  # the bot's own create request in this dedicated development channel.
+  set lifecycle_marker: "OWCord v0.7 lifecycle smoke " + str(time_ms())
+  set created_id: bot.message_create(channel, lifecycle_marker)
+  call: assert(created_id != "", "live v0.7: new message ID")
+  set retrieved: bot.message_get(channel, created_id)
+  call: assert(retrieved.id == created_id, "live v0.7: fetched message ID")
+  call: assert(retrieved.channel_id == channel, "live v0.7: fetched channel ID")
+  call: assert(retrieved.content == lifecycle_marker, "live v0.7: fetched content")
+
+  set listing: bot.message_list(channel, "", "before", 50)
+  set found_message: 0
+  set page_index: 0
+  while: page_index < len(listing)
+    if: listing[page_index].id == created_id
+      set found_message: 1
+    set page_index: page_index + 1
+  call: assert(found_message == 1, "live v0.7: message appears in paginated list")
+  print: "LIVE PASS: create/get/paginate real Discord message and exact snowflake ID"
+
+  set edited: bot.message_edit(channel, created_id, lifecycle_marker + " EDITED")
+  call: assert(edited.id == created_id, "live v0.7: edit ID")
+  call: assert(edited.content == lifecycle_marker + " EDITED", "live v0.7: edit response")
+  print: "LIVE PASS: edit real bot-owned Discord message"
+
+  set added: bot.reaction_add(channel, created_id, "👍")
+  call: assert(added == 204, "live v0.7: add own reaction")
+  set reactors: bot.reaction_users(channel, created_id, "👍", "", 10)
+  call: assert(len(reactors) > 0, "live v0.7: read reaction users")
+  set removed: bot.reaction_remove(channel, created_id, "👍")
+  call: assert(removed == 204, "live v0.7: remove own reaction")
+  print: "LIVE PASS: own reaction add/read/remove in real Discord"
+
+  set deleted: bot.message_delete(channel, created_id)
+  call: assert(deleted == 204, "live v0.7: delete bot-owned message")
+  print: "LIVE PASS: deleted only the test message created in this run"
+
   call: assert(app.stop() == 1, "live v0.2: disconnect")
   print: "LIVE PASS: clean flOW shutdown"
   print: "LIVE V0.2 COMPLETE: real Discord Gateway, OW event parsing, command registration and message delivery"
