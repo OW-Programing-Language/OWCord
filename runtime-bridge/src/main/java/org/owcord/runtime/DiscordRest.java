@@ -366,13 +366,13 @@ final class DiscordRest {
      * blindly retries IO failures or ambiguous 5xx POST results.
      */
     private HttpResponse<String> request(String method, String path, String json, boolean auth) {
-        return request(method, path, json, auth, "");
+        return request(method, path, json, auth, null);
     }
 
     private synchronized HttpResponse<String> request(String method, String path, String json,
                                                        boolean auth, String auditReason) {
         // Check the reason before network activity, including blank/malformed values.
-        String encodedAuditReason = auditReason.isEmpty() ? "" : DiscordGuildPayload.auditReason(auditReason);
+        String encodedAuditReason = auditReason == null ? "" : DiscordGuildPayload.auditReason(auditReason);
         HttpRequest.Builder b = HttpRequest.newBuilder(base.resolve(path))
             .timeout(Duration.ofSeconds(12))
             .header("Accept", "application/json")

@@ -30,6 +30,19 @@ final class DiscordRateLimiter {
             return method + " channels/*/messages/*/reactions/*" +
                 (clean.endsWith("/@me") ? "/@me" : "");
         }
+        String cleanGuild = path.split("\\?", 2)[0];
+        if (cleanGuild.matches("guilds/[0-9]+"))
+            return method + " guilds/*";
+        if (cleanGuild.matches("guilds/[0-9]+/(?:channels|roles|members)"))
+            return method + " " + cleanGuild.replaceFirst("^guilds/[0-9]+", "guilds/*");
+        if (cleanGuild.matches("guilds/[0-9]+/roles/[0-9]+"))
+            return method + " guilds/*/roles/*";
+        if (cleanGuild.matches("guilds/[0-9]+/members/[0-9]+"))
+            return method + " guilds/*/members/*";
+        if (cleanGuild.matches("guilds/[0-9]+/members/[0-9]+/roles/[0-9]+"))
+            return method + " guilds/*/members/*/roles/*";
+        if (cleanGuild.matches("channels/[0-9]+"))
+            return method + " channels/*";
         if (path.matches("interactions/[0-9]+/[^/]+/callback"))
             return method + " interactions/*/callback";
         if (path.matches("webhooks/[0-9]+/[^/]+"))
