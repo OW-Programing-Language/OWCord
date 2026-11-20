@@ -106,3 +106,16 @@ fn typedThreadsAndReactionsKeepDiscordSnowflakesAsStrings():
   call: assert(bulk.kind == "message_bulk")
   call: assert(bulk.action == "delete")
   call: assert(bulk.payload.ids[0] == "9001")
+
+@Test
+fn propagatesSourceShardIdAcrossTypedEvents():
+  set parser: new EventParser()
+  set a: parser.decode("{\"type\":\"MESSAGE_CREATE\",\"shard_id\":3,\"data\":{\"id\":\"444\",\"content\":\"hello\"}}")
+  call: assert(a.kind == "message")
+  call: assert(a.shard_id == 3)
+  set b: parser.decode("{\"type\":\"RESUMED\",\"shard_id\":2,\"data\":{}}")
+  call: assert(b.kind == "ready")
+  call: assert(b.action == "resumed")
+  call: assert(b.shard_id == 2)
+  set c: parser.decode("{\"type\":\"READY\",\"data\":{}}")
+  call: assert(c.shard_id == 0)

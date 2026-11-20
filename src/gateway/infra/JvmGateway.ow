@@ -29,3 +29,7 @@ module OWCord.JvmGateway: DISCORD_GATEWAY
     return: extension("owcord.gateway.cache_member", guild_id, user_id)
   fn cache_clear() -> int:
     return: extension("owcord.gateway.cache_clear")
+  fn shard_config() -> string:
+    return: extension("owcord.gateway.shard_config")
+  fn shard_status() -> string:
+    return: extension("owcord.gateway.shard_status")

@@ -175,3 +175,15 @@ empty partial message updates.
 
 Read [the v0.11 guide](docs/GATEWAY-INTENTS-CACHE-EVENTS.md) and
 [the read-only cache example](examples/gateway_cache/main.ow).
+
+## v0.12 — Gateway Sharding & Coordinated Identify
+
+OWCord can run multiple Gateway shards **within one OW interpreter/process**.
+Configure `OWCORD_SHARD_COUNT` and `OWCORD_SHARD_IDS`, inspect status via
+`bot.shard_config()` / `bot.shard_status()` and receive per-event shard IDs.
+One in-process coordinator enforces the Discord `max_concurrency` Identify
+buckets and remaining session-start budget; per-shard resume/reconnect is
+isolated. Default is still a single shard, so existing bots are unaffected.
+
+See [Gateway sharding guide](docs/GATEWAY-SHARDING.md) for deployment limits:
+**cross-process coordination is not included**.

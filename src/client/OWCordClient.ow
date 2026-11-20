@@ -269,3 +269,9 @@ class OWCordClient:
 
   fn clear_gateway_cache():
     return: this.gateway.cache_clear()
+  # v0.12: the assigned shard IDs and runtime readiness per shard.
+  fn shard_config():
+    return: json_parse(this.gateway.shard_config())
+
+  fn shard_status():
+    return: json_parse(this.gateway.shard_status())

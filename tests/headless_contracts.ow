@@ -35,6 +35,10 @@ module OWCord.MockGateway: DISCORD_GATEWAY
     return: "{\"found\":false}"
   fn cache_clear() -> int:
     return: 1
+  fn shard_config() -> string:
+    return: "{\"total_shards\":1,\"local_shard_ids\":[0],\"local_shard_count\":1,\"coordinator_scope\":\"process\"}"
+  fn shard_status() -> string:
+    return: "{\"total_shards\":1,\"local_shard_ids\":[0],\"local_shard_count\":1,\"all_ready\":true,\"shards\":[{\"shard_id\":0,\"total_shards\":1,\"ready\":true,\"running\":true,\"reconnect_failures\":0}],\"coordinator_scope\":\"process\"}"
 
 
 module OWCord.MockRest: DISCORD_REST

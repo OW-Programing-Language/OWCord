@@ -199,6 +199,17 @@ main:
   call: assert(bot.clear_gateway_cache() == 1, "live v0.11: explicit invalidation")
   print: "LIVE PASS: v0.11 named intents, bounded cache and safe read-only introspection"
 
+  # v0.12: real Discord checks SINGLE shard only. Multi-shard correctness
+  # is covered by offline deterministic tests to respect session-start limits.
+  set shard_config: bot.shard_config()
+  call: assert(shard_config.total_shards == 1, "live v0.12: configured one shard")
+  call: assert(shard_config.local_shard_ids[0] == 0, "live v0.12: shard zero")
+  set shard_health: bot.shard_status()
+  call: assert(shard_health.all_ready == true, "live v0.12: shard READY")
+  call: assert(shard_health.shards[0].shard_id == 0, "live v0.12: shard health ID")
+  call: assert(shard_health.max_concurrency > 0, "live v0.12: Discord concurrency discovered")
+  print: "LIVE PASS: v0.12 single-shard Identify, READY and shard health introspection"
+
   call: assert(app.stop() == 1, "live v0.2: disconnect")
   print: "LIVE PASS: clean flOW shutdown"
   print: "LIVE V0.2 COMPLETE: real Discord Gateway, OW event parsing, command registration and message delivery"
