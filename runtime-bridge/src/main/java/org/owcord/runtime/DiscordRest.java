@@ -278,6 +278,47 @@ final class DiscordRest {
         return r.statusCode();
     }
 
+    // Moderation operations always carry an explicit validated audit reason.
+    // Discord remains authoritative for bot permissions, guild ownership and
+    // role hierarchy; this transport does not attempt to bypass these checks.
+    int kickMember(String guildId, String userId, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/members/" + snowflake(userId);
+        HttpResponse<String> r = request("DELETE", path, "", true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
+    int banMember(String guildId, String userId, int deleteMessageSeconds, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/bans/" + snowflake(userId);
+        HttpResponse<String> r = request("PUT", path,
+            DiscordModerationPayload.ban(deleteMessageSeconds), true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
+    int unbanMember(String guildId, String userId, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/bans/" + snowflake(userId);
+        HttpResponse<String> r = request("DELETE", path, "", true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
+    String timeoutMember(String guildId, String userId, String untilIso, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/members/" + snowflake(userId);
+        HttpResponse<String> r = request("PATCH", path,
+            DiscordModerationPayload.timeout(untilIso), true, reason);
+        check(r);
+        return DiscordGuildModel.member(r.body());
+    }
+
+    String clearMemberTimeout(String guildId, String userId, String reason) {
+        String path = "guilds/" + snowflake(guildId) + "/members/" + snowflake(userId);
+        HttpResponse<String> r = request("PATCH", path,
+            DiscordModerationPayload.clearTimeout(), true, reason);
+        check(r);
+        return DiscordGuildModel.member(r.body());
+    }
+
     static String reactionPath(String channel, String messageId, String emoji) {
         if (emoji == null || emoji.isBlank() || emoji.length() > 100)
             throw new IllegalArgumentException("Emoji must be nonempty and at most 100 characters");
@@ -376,14 +417,19 @@ final class DiscordRest {
         HttpRequest.Builder b = HttpRequest.newBuilder(base.resolve(path))
             .timeout(Duration.ofSeconds(12))
             .header("Accept", "application/json")
-            .header("User-Agent", "OWCord/0.8 (https://github.com/OW-Programing-Language/OWCord)");
+            .header("User-Agent", "OWCord/0.9 (https://github.com/OW-Programing-Language/OWCord)");
         if (auth) b.header("Authorization", "Bot " + token);
         if (!encodedAuditReason.isEmpty()) b.header("X-Audit-Log-Reason", encodedAuditReason);
         switch (method) {
             case "POST", "PATCH" -> b.header("Content-Type", "application/json")
                 .method(method, HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
             case "GET" -> b.GET();
-            case "PUT" -> b.PUT(HttpRequest.BodyPublishers.noBody());
+            case "PUT" -> {
+                if (json != null && !json.isEmpty())
+                    b.header("Content-Type", "application/json")
+                        .PUT(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+                else b.PUT(HttpRequest.BodyPublishers.noBody());
+            }
             case "DELETE" -> b.DELETE();
             default -> throw new IllegalArgumentException("Unsupported Discord HTTP method");
         }

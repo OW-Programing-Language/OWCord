@@ -159,6 +159,17 @@ main:
   call: assert(len(roles) > 0, "live v0.8: at least one guild role")
   print: "LIVE PASS: v0.8 guild, channel and role read-only REST inspection"
 
+  # v0.9: read-only live authorization evaluation for the bot itself.
+  # No kick, timeout, ban, unban or role changes are invoked in this smoke.
+  set bot_id: extension("owcord.test.application_id")
+  set current_member: bot.guild_member(guild_id, bot_id)
+  call: assert(current_member.user_id == bot_id, "live v0.9: own bot member")
+  set effective: bot.effective_permissions(guild_id, bot_id, channel)
+  call: assert(effective != "", "live v0.9: effective permissions decimal string")
+  call: assert(bot.has_permission(effective, "1024") == 1, "live v0.9: test channel visible")
+  call: assert(bot.can_moderate(guild_id, bot_id, bot_id, "kick") == 0, "live v0.9: cannot kick self")
+  print: "LIVE PASS: v0.9 read-only permission calculation and self-moderation denial"
+
   call: assert(app.stop() == 1, "live v0.2: disconnect")
   print: "LIVE PASS: clean flOW shutdown"
   print: "LIVE V0.2 COMPLETE: real Discord Gateway, OW event parsing, command registration and message delivery"

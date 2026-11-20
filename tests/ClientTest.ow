@@ -171,6 +171,30 @@ class FakeRest:
   fn guild_member_role_remove(guild_id, user_id, role_id, reason):
     return: 204
 
+  fn permission_effective(guild_json, member_json, channel_json, roles_json):
+    return: "1024"
+
+  fn permission_can_moderate(guild_json, actor_json, target_json, roles_json, action):
+    return: 0
+
+  fn permission_role_manageable(guild_json, actor_json, role_id, roles_json):
+    return: 0
+
+  fn moderation_kick(guild_id, user_id, reason):
+    return: 204
+
+  fn moderation_ban(guild_id, user_id, delete_message_seconds, reason):
+    return: 204
+
+  fn moderation_unban(guild_id, user_id, reason):
+    return: 204
+
+  fn moderation_timeout(guild_id, user_id, until_iso, reason):
+    return: "{\"user_id\":\"222\",\"nick\":\"\",\"joined_at\":\"\",\"roles\":[\"444\"],\"pending\":false,\"communication_disabled_until\":\"\"}"
+
+  fn moderation_clear_timeout(guild_id, user_id, reason):
+    return: "{\"user_id\":\"222\",\"nick\":\"\",\"joined_at\":\"\",\"roles\":[\"444\"],\"pending\":false,\"communication_disabled_until\":\"\"}"
+
 @Test
 fn syncsAndRoutesCommandsWithMockTransport():
   set gateway: new FakeGateway()
@@ -313,3 +337,20 @@ fn guildRoleChannelAndMemberFacadeUsesExactIds():
   call: assert(bot.guild_role_delete("111", "444", "OWCord test") == 204)
   call: assert(bot.guild_member_role_add("111", "222", "444", "OWCord test") == 204)
   call: assert(bot.guild_member_role_remove("111", "222", "444", "OWCord test") == 204)
+
+@Test
+fn exposesModerationAndAuthorizationFacadesWithoutNetwork():
+  set gateway: new FakeGateway()
+  set rest: new FakeRest()
+  set bot: new OWCordClient(gateway, rest)
+  set flags: bot.effective_permissions("111", "222", "333")
+  call: assert(flags == "1024")
+  call: assert(bot.can_moderate("111", "222", "222", "kick") == 0)
+  call: assert(bot.can_manage_role("111", "222", "444") == 0)
+  call: assert(bot.moderation_kick("111", "222", "audit reason") == 204)
+  call: assert(bot.moderation_ban("111", "222", 0, "audit reason") == 204)
+  call: assert(bot.moderation_unban("111", "222", "audit reason") == 204)
+  set result: bot.moderation_timeout("111", "222", "2026-12-01T00:00:00Z", "audit reason")
+  call: assert(result.user_id == "222")
+  set cleared: bot.moderation_clear_timeout("111", "222", "audit reason")
+  call: assert(cleared.user_id == "222")

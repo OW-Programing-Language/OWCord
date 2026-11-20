@@ -172,3 +172,46 @@ class OWCordClient:
 
   fn guild_member_role_remove(guild_id, user_id, role_id, reason):
     return: this.rest.guild_member_role_remove(guild_id, user_id, role_id, reason)
+  # Snapshot-based permission helpers. Discord's server remains authoritative.
+  fn effective_permissions(guild_id, user_id, channel_id):
+    set guild: this.guild_get(guild_id)
+    set member: this.guild_member(guild_id, user_id)
+    set channel: this.channel_get(channel_id)
+    set roles: this.guild_roles(guild_id)
+    return: this.rest.permission_effective(json(guild), json(member), json(channel), json(roles))
+
+  fn has_permission(granted, required):
+    return: extension("owcord.permissions.has", granted, required)
+
+  # Authorization preflight only; does not mutate Discord.
+  fn can_moderate(guild_id, actor_id, target_id, action):
+    set guild: this.guild_get(guild_id)
+    set actor: this.guild_member(guild_id, actor_id)
+    # Banned users are no longer members; unbanning checks only actor rights.
+    set target: {user_id: target_id, roles: []}
+    if: action != "unban"
+      set target: this.guild_member(guild_id, target_id)
+    set roles: this.guild_roles(guild_id)
+    return: this.rest.permission_can_moderate(json(guild), json(actor), json(target), json(roles), action)
+
+  fn can_manage_role(guild_id, actor_id, role_id):
+    set guild: this.guild_get(guild_id)
+    set actor: this.guild_member(guild_id, actor_id)
+    set roles: this.guild_roles(guild_id)
+    return: this.rest.permission_role_manageable(json(guild), json(actor), role_id, json(roles))
+
+  # Explicit audited moderation; use can_moderate on the requesting user first.
+  fn moderation_kick(guild_id, user_id, reason):
+    return: this.rest.moderation_kick(guild_id, user_id, reason)
+
+  fn moderation_ban(guild_id, user_id, delete_message_seconds, reason):
+    return: this.rest.moderation_ban(guild_id, user_id, delete_message_seconds, reason)
+
+  fn moderation_unban(guild_id, user_id, reason):
+    return: this.rest.moderation_unban(guild_id, user_id, reason)
+
+  fn moderation_timeout(guild_id, user_id, until_iso, reason):
+    return: json_parse(this.rest.moderation_timeout(guild_id, user_id, until_iso, reason))
+
+  fn moderation_clear_timeout(guild_id, user_id, reason):
+    return: json_parse(this.rest.moderation_clear_timeout(guild_id, user_id, reason))
