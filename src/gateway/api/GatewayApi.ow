@@ -2,3 +2,9 @@ module_type DISCORD_GATEWAY:
   include NATIVE_LIFECYCLE
   fn connected() -> int
   fn poll(timeout_ms int) -> string
+  fn intents() -> string
+  fn cache_stats() -> string
+  fn cache_guild(id string) -> string
+  fn cache_channel(id string) -> string
+  fn cache_member(guild_id string, user_id string) -> string
+  fn cache_clear() -> int
