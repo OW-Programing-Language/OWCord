@@ -131,6 +131,27 @@ module OWCord.MockRest: DISCORD_REST
   fn moderation_clear_timeout(guild_id string, user_id string, reason string) -> string:
     return: "{\"user_id\":\"222\",\"nick\":\"\",\"joined_at\":\"\",\"roles\":[\"444\"],\"pending\":false,\"communication_disabled_until\":\"\"}"
 
+  fn v2_create(channel_id string, payload_json string) -> string:
+    return: "12345"
+  fn v2_reply(interaction_id string, interaction_token string, payload_json string, private int) -> int:
+    return: 204
+  fn v2_update(interaction_id string, interaction_token string, payload_json string) -> int:
+    return: 204
+  fn v2_followup(interaction_token string, payload_json string, private int) -> string:
+    return: "12345"
+  fn defer_component_update(interaction_id string, interaction_token string) -> int:
+    return: 204
+  fn edit_original(interaction_token string, content string) -> string:
+    return: "{\"id\":\"12345\",\"channel_id\":\"55\",\"content\":\"Updated\",\"author_id\":\"66\",\"timestamp\":\"\",\"edited_timestamp\":\"\",\"pinned\":false}"
+  fn delete_original(interaction_token string) -> int:
+    return: 204
+  fn edit_followup(interaction_token string, message_id string, content string) -> string:
+    return: "{\"id\":\"12345\",\"channel_id\":\"55\",\"content\":\"Updated\",\"author_id\":\"66\",\"timestamp\":\"\",\"edited_timestamp\":\"\",\"pinned\":false}"
+  fn delete_followup(interaction_token string, message_id string) -> int:
+    return: 204
+  fn register_global_context_command(name string, description string, contexts_json string, integrations_json string) -> int:
+    return: 201
+
 main:
   set app: new App()
   call: app.use_native_as(OWCord.MockGateway, "DISCORD_GATEWAY")

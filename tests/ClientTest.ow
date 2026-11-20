@@ -195,6 +195,43 @@ class FakeRest:
   fn moderation_clear_timeout(guild_id, user_id, reason):
     return: "{\"user_id\":\"222\",\"nick\":\"\",\"joined_at\":\"\",\"roles\":[\"444\"],\"pending\":false,\"communication_disabled_until\":\"\"}"
 
+  fn v2_create(channel_id, payload_json):
+    set this.last_message: payload_json
+    return: "12345"
+
+  fn v2_reply(interaction_id, interaction_token, payload_json, private):
+    set this.last_reply: payload_json
+    return: 204
+
+  fn v2_update(interaction_id, interaction_token, payload_json):
+    set this.last_reply: payload_json
+    return: 204
+
+  fn v2_followup(interaction_token, payload_json, private):
+    set this.last_followup: payload_json
+    return: "12345"
+
+  fn defer_component_update(interaction_id, interaction_token):
+    return: 204
+
+  fn edit_original(interaction_token, content):
+    set this.last_reply: content
+    return: "{\"id\":\"12345\",\"channel_id\":\"55\",\"content\":\"Updated\",\"author_id\":\"66\",\"timestamp\":\"\",\"edited_timestamp\":\"\",\"pinned\":false}"
+
+  fn delete_original(interaction_token):
+    return: 204
+
+  fn edit_followup(interaction_token, message_id, content):
+    set this.last_reply: content
+    return: "{\"id\":\"12345\",\"channel_id\":\"55\",\"content\":\"Updated\",\"author_id\":\"66\",\"timestamp\":\"\",\"edited_timestamp\":\"\",\"pinned\":false}"
+
+  fn delete_followup(interaction_token, message_id):
+    return: 204
+
+  fn register_global_context_command(name, description, contexts_json, integrations_json):
+    call: map_set(this.registered, name, contexts_json)
+    return: 201
+
 @Test
 fn syncsAndRoutesCommandsWithMockTransport():
   set gateway: new FakeGateway()
@@ -354,3 +391,37 @@ fn exposesModerationAndAuthorizationFacadesWithoutNetwork():
   call: assert(result.user_id == "222")
   set cleared: bot.moderation_clear_timeout("111", "222", "audit reason")
   call: assert(cleared.user_id == "222")
+
+
+@Test
+fn supportsV2ResponsesAndEditingWithoutNetwork():
+  set gateway: new FakeGateway()
+  set rest: new FakeRest()
+  set bot: new OWCordClient(gateway, rest)
+  set event: {id: "333", token: "opaque"}
+  set v2: "{\"flags\":32768,\"components\":[{\"type\":10,\"content\":\"hello\"}]}"
+  call: assert(bot.v2_create("55", v2) == "12345")
+  call: assert(rest.last_message == v2)
+  call: assert(bot.v2_reply(event, v2, 1) == 204)
+  call: assert(rest.last_reply == v2)
+  call: assert(bot.v2_update(event, v2) == 204)
+  call: assert(bot.v2_followup(event, v2, 0) == "12345")
+  call: assert(rest.last_followup == v2)
+  call: assert(bot.defer_component_update(event) == 204)
+  set original: bot.edit_original(event, "Updated")
+  call: assert(original.id == "12345")
+  call: assert(rest.last_reply == "Updated")
+  call: assert(bot.delete_original(event) == 204)
+  set edited: bot.edit_followup(event, "12345", "Updated")
+  call: assert(edited.content == "Updated")
+  call: assert(bot.delete_followup(event, "12345") == 204)
+
+@Test
+fn registersExplicitGlobalContextsWithoutCreatingGuildCommand():
+  set gateway: new FakeGateway()
+  set rest: new FakeRest()
+  set bot: new OWCordClient(gateway, rest)
+  call: assert(bot.command_global("profile", "User profile", "profile_handler", [0, 1, 2], [0, 1]) == 1)
+  call: assert(bot.command_global("profile", "Duplicate", "another_handler", [0], [0]) == 0)
+  call: assert(bot.sync_dev_commands() == 1)
+  call: assert(map_get(rest.registered, "profile", "") == "[0,1,2]")

@@ -35,3 +35,32 @@ fn parsesComponentValuesAndModalSubmissions():
   call: assert(modal_event.custom_id == "feedback_form")
   call: assert(parser.modal_value(modal_event, "feedback", "") == "Great!")
   call: assert(parser.modal_value(modal_event, "missing", "default") == "default")
+
+
+@Test
+fn buildsComponentsV2LayoutsUsingPureOW():
+  set ui: new DiscordUI()
+  set title: ui.v2_text("# OWCord v0.10")
+  set details: ui.v2_text("Welcome to the new UI")
+  set section: ui.v2_section([details], ui.button("details", "Details", 1))
+  set separator: ui.v2_separator(true, 1)
+  set container: ui.v2_container([title, separator, section], 5793266)
+  set payload: json_parse(ui.v2_message([container]))
+  call: assert(payload.flags == 32768)
+  call: assert(payload.components[0].type == 17)
+  call: assert(payload.components[0].accent_color == 5793266)
+  call: assert(payload.components[0].components[2].type == 9)
+  call: assert(payload.components[0].components[2].accessory.custom_id == "details")
+  set gallery: ui.v2_gallery([ui.v2_media_item("https://example.org/a.png", "Demo image", false)])
+  call: assert(gallery.items[0].media.url == "https://example.org/a.png")
+  set thumb: ui.v2_thumbnail("https://example.org/thumb.png")
+  call: assert(thumb.type == 11)
+
+@Test
+fn exposesInstallationContextAndLocaleOnInteractions():
+  set parser: new EventParser()
+  set event: parser.decode("{\"type\":\"INTERACTION_CREATE\",\"data\":{\"type\":2,\"id\":\"333\",\"token\":\"opaque\",\"context\":2,\"authorizing_integration_owners\":{\"1\":\"444\"},\"locale\":\"fr\",\"data\":{\"name\":\"profile\"}}}")
+  call: assert(event.kind == "command")
+  call: assert(event.context == 2)
+  call: assert(event.locale == "fr")
+  call: assert(map_get(event.integration_owners, "1", "") == "444")
