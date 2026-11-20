@@ -18,6 +18,9 @@ final class DiscordRest {
     private final URI base;
     private final HttpClient http;
     private final DiscordRateLimiter limits = new DiscordRateLimiter();
+    private final DiscordRestTelemetry telemetry = new DiscordRestTelemetry();
+    String metrics() { return telemetry.snapshot(); }
+    String lastError() { return telemetry.lastError(); }
 
     DiscordRest(String token) {
         this(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build(), API, token);
@@ -492,61 +495,96 @@ final class DiscordRest {
 
     private synchronized HttpResponse<String> request(String method, String path, String json,
                                                        boolean auth, String auditReason) {
-        // Check the reason before network activity, including blank/malformed values.
-        String encodedAuditReason = auditReason == null ? "" : DiscordGuildPayload.auditReason(auditReason);
-        HttpRequest.Builder b = HttpRequest.newBuilder(base.resolve(path))
+        // All outward-facing labels are normalized: interaction/webhook tokens
+        // never appear in diagnostic strings, metrics or exception messages.
+        String route=DiscordRateLimiter.routeKey(method,path);
+        String major=DiscordRateLimiter.majorResource(path);
+        String encodedAuditReason=auditReason==null ? "" : DiscordGuildPayload.auditReason(auditReason);
+        HttpRequest.Builder b=HttpRequest.newBuilder(base.resolve(path))
             .timeout(Duration.ofSeconds(12))
-            .header("Accept", "application/json")
-            .header("User-Agent", "OWCord/0.9 (https://github.com/OW-Programing-Language/OWCord)");
-        if (auth) b.header("Authorization", "Bot " + token);
-        if (!encodedAuditReason.isEmpty()) b.header("X-Audit-Log-Reason", encodedAuditReason);
-        switch (method) {
-            case "POST", "PATCH" -> b.header("Content-Type", "application/json")
-                .method(method, HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+            .header("Accept","application/json")
+            .header("User-Agent","OWCord/0.13 (https://github.com/OW-Programing-Language/OWCord)");
+        if(auth) b.header("Authorization","Bot "+token);
+        if(!encodedAuditReason.isEmpty()) b.header("X-Audit-Log-Reason",encodedAuditReason);
+        switch(method) {
+            case "POST","PATCH" -> b.header("Content-Type","application/json")
+                .method(method,HttpRequest.BodyPublishers.ofString(json,StandardCharsets.UTF_8));
             case "GET" -> b.GET();
             case "PUT" -> {
-                if (json != null && !json.isEmpty())
-                    b.header("Content-Type", "application/json")
-                        .PUT(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+                if(json!=null && !json.isEmpty())
+                    b.header("Content-Type","application/json")
+                        .PUT(HttpRequest.BodyPublishers.ofString(json,StandardCharsets.UTF_8));
                 else b.PUT(HttpRequest.BodyPublishers.noBody());
             }
             case "DELETE" -> b.DELETE();
             default -> throw new IllegalArgumentException("Unsupported Discord HTTP method");
         }
-        HttpRequest request = b.build();
-
-        String route = DiscordRateLimiter.routeKey(method, path);
-        String major = DiscordRateLimiter.majorResource(path);
-        long start = System.nanoTime();
-        // Interaction callbacks must be acknowledged in 3 seconds. Don't sleep
-        // through that deadline waiting for a bucket to open.
-        long maxWait = path.startsWith("interactions/") ? 2_000_000_000L : 8_000_000_000L;
+        HttpRequest request=b.build();
+        long start=System.nanoTime();
+        long maxWait=path.startsWith("interactions/") ? 2_000_000_000L : 8_000_000_000L;
         try {
-            for (int attempt = 0; attempt < 3; attempt++) {
-                long now = System.nanoTime();
-                long delay = limits.waitNanos(route, major, auth, now);
-                if (delay > 0) {
-                    if (delay > maxWait - (now - start))
+            for(int attempt=0;attempt<3;attempt++) {
+                long now=System.nanoTime();
+                long delay=limits.waitNanos(route,major,auth,now);
+                if(delay>0) {
+                    if(delay>maxWait-(now-start))
                         throw new IllegalStateException("Discord rate-limit wait exceeds request budget");
                     java.util.concurrent.TimeUnit.NANOSECONDS.sleep(delay);
                 }
+                telemetry.attempt();
+                long sentAt=System.nanoTime();
+                HttpResponse<String> response=http.send(request,HttpResponse.BodyHandlers.ofString());
+                telemetry.completed(route,response.statusCode(),System.nanoTime()-sentAt);
+                limits.observe(route,major,auth,response,System.nanoTime());
 
-                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-                limits.observe(route, major, auth, response, System.nanoTime());
-                if (response.statusCode() != 429) return response;
-                if (attempt == 2) throw new IllegalStateException("Discord rate limit persisted after three attempts");
+                if(response.statusCode()==429) {
+                    if(attempt==2) {
+                        DiscordApiException error=DiscordApiException.from(
+                            response,route,DiscordRestTelemetry.nextRequestId());
+                        telemetry.failed(error);
+                        throw error;
+                    }
+                    telemetry.retry();
+                    continue;
+                }
+
+                // Only GET may safely retry transient 502/503/504. Mutation
+                // requests are never replayed on server errors or IO failures.
+                if(method.equals("GET") &&
+                   (response.statusCode()==502 || response.statusCode()==503 ||
+                    response.statusCode()==504) && attempt<2) {
+                    long backoffMs=50L*(attempt+1);
+                    if(java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(backoffMs)
+                       > maxWait-(System.nanoTime()-start))
+                        return response;
+                    telemetry.retry();
+                    java.util.concurrent.TimeUnit.MILLISECONDS.sleep(backoffMs);
+                    continue;
+                }
+                return response;
             }
             throw new IllegalStateException("Discord retry limit exceeded");
-        } catch (InterruptedException e) {
+        } catch(InterruptedException error) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Discord request interrupted", e);
-        } catch (IOException e) {
-            // A write may already have been processed remotely: avoid duplication.
-            throw new IllegalStateException("Discord request failed without retry", e);
+            telemetry.transportError();
+            throw new IllegalStateException("Discord request interrupted",error);
+        } catch(IOException error) {
+            // No network retries: mutations may have been processed remotely.
+            telemetry.transportError();
+            throw new IllegalStateException("Discord transport failure without retry");
         }
     }
-    private static void check(HttpResponse<String> r) {
-        if (r.statusCode() < 200 || r.statusCode() >= 300)
-            throw new IllegalStateException("Discord HTTP status " + r.statusCode());
+    private void check(HttpResponse<String> r) {
+        if(r.statusCode()<200 || r.statusCode()>=300) {
+            String rawPath=r.request().uri().getRawPath();
+            String basePath=base.getRawPath();
+            if(basePath!=null && rawPath.startsWith(basePath)) rawPath=rawPath.substring(basePath.length());
+            else while(rawPath.startsWith("/")) rawPath=rawPath.substring(1);
+            String route=DiscordRateLimiter.routeKey(r.request().method(),rawPath);
+            DiscordApiException error=DiscordApiException.from(
+                r,route,DiscordRestTelemetry.nextRequestId());
+            telemetry.failed(error);
+            throw error;
+        }
     }
 }
