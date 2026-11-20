@@ -69,6 +69,7 @@ class DiscordGuildRestTest {
     @Test void routesReadAndAuditGuardedWriteCallsThroughLocalHttpServer() throws Exception {
         AtomicReference<String> lastPath = new AtomicReference<>("");
         AtomicReference<String> lastMethod = new AtomicReference<>("");
+        AtomicReference<String> lastQuery = new AtomicReference<>("");
         AtomicReference<String> lastReason = new AtomicReference<>();
         AtomicReference<String> lastBody = new AtomicReference<>("");
         AtomicInteger requestCount = new AtomicInteger();
@@ -79,6 +80,7 @@ class DiscordGuildRestTest {
             String m = exchange.getRequestMethod();
             requestCount.incrementAndGet();
             lastPath.set(p);
+            lastQuery.set(exchange.getRequestURI().getRawQuery() == null ? "" : exchange.getRequestURI().getRawQuery());
             lastMethod.set(m);
             lastReason.set(exchange.getRequestHeaders().getFirst("X-Audit-Log-Reason"));
             lastBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
@@ -125,8 +127,9 @@ class DiscordGuildRestTest {
                 ((Map<?, ?>) ((List<?>) Json.parse(rest.listGuildRoles(G))).get(0)).get("permissions"));
             assertEquals(U, ((Map<?, ?>) Json.parse(rest.getGuildMember(G, U))).get("user_id"));
             assertEquals(1, ((List<?>) Json.parse(rest.listGuildMembers(G, "", 5))).size());
-            assertEquals("limit=5", exchangeQuery(history, lastPath));
+            assertEquals("limit=5", lastQuery.get());
             assertEquals(1, ((List<?>) Json.parse(rest.listGuildMembers(G, U, 20))).size());
+            assertEquals("limit=20&after=222", lastQuery.get());
 
             Map<?, ?> created = (Map<?, ?>) Json.parse(rest.createTextChannel(G, "lab", "", "OWCord test"));
             assertEquals("555", created.get("id"));
@@ -160,16 +163,10 @@ class DiscordGuildRestTest {
             assertThrows(IllegalArgumentException.class, () ->
                 rest.getGuildMember(G, "bad"));
             assertEquals(before, requestCount.get(), "Invalid input must not hit the network");
-            assertEquals(14, history.size());
+            assertEquals(15, history.size());
         } finally {
             server.stop(0);
         }
-    }
-
-    // The test tracks raw path separately; pagination arguments are asserted in
-    // a dedicated path test to avoid relying on URI string rendering here.
-    private static String exchangeQuery(List<String> history, AtomicReference<String> unused) {
-        return "limit=5";
     }
 
     @Test void routeKeysDoNotAccumulatePerUserOrPerRole() {
