@@ -74,6 +74,94 @@ final class DiscordRest {
         return result.statusCode();
     }
 
+    // Global command scopes, unlike development guild commands, can specify
+    // contexts and integration types. A global command may take time to propagate.
+    int registerGlobalContextCommand(String applicationId, String name, String description,
+                                     String contextsJson, String installationsJson) {
+        String path = "applications/" + snowflake(applicationId) + "/commands";
+        HttpResponse<String> r = request("POST", path,
+            DiscordCommandContexts.command(name, description, contextsJson, installationsJson), true);
+        check(r);
+        return r.statusCode();
+    }
+
+    /** Creates a Components V2 message and returns its exact snowflake ID. */
+    String createV2Message(String channelId, String json) {
+        String path = "channels/" + snowflake(channelId) + "/messages";
+        HttpResponse<String> r = request("POST", path, ComponentsV2Payload.message(json), true);
+        check(r);
+        return DiscordMessageModel.messageId(r.body());
+    }
+
+    int replyV2Interaction(String interactionId, String token, String json, boolean ephemeral) {
+        String path = "interactions/" + snowflake(interactionId) + "/"
+            + interactionToken(token) + "/callback";
+        HttpResponse<String> r = request("POST", path,
+            ComponentsV2Payload.callback(json, ephemeral, false), false);
+        check(r);
+        return r.statusCode();
+    }
+
+    int updateV2Component(String interactionId, String token, String json) {
+        String path = "interactions/" + snowflake(interactionId) + "/"
+            + interactionToken(token) + "/callback";
+        HttpResponse<String> r = request("POST", path,
+            ComponentsV2Payload.callback(json, false, true), false);
+        check(r);
+        return r.statusCode();
+    }
+
+    int deferComponentUpdate(String interactionId, String token) {
+        String path = "interactions/" + snowflake(interactionId) + "/"
+            + interactionToken(token) + "/callback";
+        HttpResponse<String> r = request("POST", path, "{\\"type\\":6}", false);
+        check(r);
+        return r.statusCode();
+    }
+
+    private static String interactionWebhook(String applicationId, String token, String messageId) {
+        String message = messageId.equals("@original") ? messageId : snowflake(messageId);
+        return "webhooks/" + snowflake(applicationId) + "/" + interactionToken(token)
+            + "/messages/" + message;
+    }
+
+    String editOriginalResponse(String applicationId, String token, String content) {
+        HttpResponse<String> r = request("PATCH",
+            interactionWebhook(applicationId, token, "@original"), messagePayload(content), false);
+        check(r);
+        return DiscordMessageModel.message(r.body());
+    }
+
+    int deleteOriginalResponse(String applicationId, String token) {
+        HttpResponse<String> r = request("DELETE",
+            interactionWebhook(applicationId, token, "@original"), "", false);
+        check(r);
+        return r.statusCode();
+    }
+
+    String editFollowupResponse(String applicationId, String token, String messageId, String content) {
+        HttpResponse<String> r = request("PATCH",
+            interactionWebhook(applicationId, token, messageId), messagePayload(content), false);
+        check(r);
+        return DiscordMessageModel.message(r.body());
+    }
+
+    int deleteFollowupResponse(String applicationId, String token, String messageId) {
+        HttpResponse<String> r = request("DELETE",
+            interactionWebhook(applicationId, token, messageId), "", false);
+        check(r);
+        return r.statusCode();
+    }
+
+    String createV2Followup(String applicationId, String token, String json, boolean ephemeral) {
+        HttpResponse<String> r = request("POST",
+            "webhooks/" + snowflake(applicationId) + "/" + interactionToken(token),
+            ephemeral ? ComponentsV2Payload.callback(json, true, false).replace("", "") : ComponentsV2Payload.message(json),
+            false);
+        check(r);
+        return DiscordMessageModel.messageId(r.body());
+    }
+
     int replyInteraction(String id, String interactionToken, String content) {
         return replyInteraction(id, interactionToken, content, false);
     }
