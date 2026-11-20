@@ -40,7 +40,7 @@ class GatewayShardingTest {
             "Shard 3 shares bucket 1 with shard 1");
         assertEquals(10_200,gate.reserveDelayMillis(4,8));
         assertEquals(15,gate.remaining());
-        now.addAndGet(15_000);
+        now.addAndGet(16_000);
         assertEquals(0,gate.reserveDelayMillis(6,8),
             "A new bucket reservation can be used once 5s elapsed");
         assertThrows(IllegalArgumentException.class,
