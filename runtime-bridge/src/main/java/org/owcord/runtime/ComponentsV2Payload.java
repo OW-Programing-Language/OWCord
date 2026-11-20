@@ -22,7 +22,8 @@ final class ComponentsV2Payload {
     static final int EPHEMERAL = 1 << 6;
     private ComponentsV2Payload() {}
 
-    static String message(String json) { return Json.write(data(json, false)); }
+    static String message(String json) { return message(json, false); }
+    static String message(String json, boolean ephemeral) { return Json.write(data(json, ephemeral)); }
 
     static String callback(String json, boolean ephemeral, boolean update) {
         if (update && ephemeral)

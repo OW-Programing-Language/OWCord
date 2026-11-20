@@ -114,7 +114,7 @@ final class DiscordRest {
     int deferComponentUpdate(String interactionId, String token) {
         String path = "interactions/" + snowflake(interactionId) + "/"
             + interactionToken(token) + "/callback";
-        HttpResponse<String> r = request("POST", path, "{\\"type\\":6}", false);
+        HttpResponse<String> r = request("POST", path, Json.write(Map.of("type", 6)), false);
         check(r);
         return r.statusCode();
     }
@@ -156,7 +156,7 @@ final class DiscordRest {
     String createV2Followup(String applicationId, String token, String json, boolean ephemeral) {
         HttpResponse<String> r = request("POST",
             "webhooks/" + snowflake(applicationId) + "/" + interactionToken(token),
-            ephemeral ? ComponentsV2Payload.callback(json, true, false).replace("", "") : ComponentsV2Payload.message(json),
+            ComponentsV2Payload.message(json, ephemeral),
             false);
         check(r);
         return DiscordMessageModel.messageId(r.body());
