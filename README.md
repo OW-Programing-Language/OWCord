@@ -187,3 +187,15 @@ isolated. Default is still a single shard, so existing bots are unaffected.
 
 See [Gateway sharding guide](docs/GATEWAY-SHARDING.md) for deployment limits:
 **cross-process coordination is not included**.
+
+## v0.13 — Typed REST Errors & Safe Diagnostics
+
+HTTP failures now use the public Java `DiscordApiException` type, retaining
+`IllegalStateException` compatibility, with sanitized numeric/status details.
+OW exposes bounded, in-memory `bot.rest_metrics()` and
+`bot.rest_last_error()` snapshots without storing tokens, raw URLs or bodies.
+Idempotent GETs now retry selected 502/503/504 responses with bounded backoff;
+writes remain protected from automatic replay on ambiguous 5xx/IO failures.
+
+See [the v0.13 REST guide](docs/REST-ERRORS-OBSERVABILITY.md) and
+[the diagnostics example](examples/rest_diagnostics/main.ow).

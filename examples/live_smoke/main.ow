@@ -210,6 +210,16 @@ main:
   call: assert(shard_health.max_concurrency > 0, "live v0.12: Discord concurrency discovered")
   print: "LIVE PASS: v0.12 single-shard Identify, READY and shard health introspection"
 
+  # v0.13: inspect sanitized diagnostics from actual successful REST traffic.
+  # Never induce real Discord 403/429 or moderation errors in live smoke.
+  set rest_diag: bot.rest_metrics()
+  call: assert(rest_diag.attempts > 0, "live v0.13: REST attempts observed")
+  call: assert(rest_diag.successful > 0, "live v0.13: REST successes observed")
+  call: assert(rest_diag.route_limit == 32, "live v0.13: bounded route labels")
+  set rest_error: bot.rest_last_error()
+  call: assert(map_has(rest_error, "present"), "live v0.13: safe last error structure")
+  print: "LIVE PASS: v0.13 bounded REST telemetry and safe error introspection"
+
   call: assert(app.stop() == 1, "live v0.2: disconnect")
   print: "LIVE PASS: clean flOW shutdown"
   print: "LIVE V0.2 COMPLETE: real Discord Gateway, OW event parsing, command registration and message delivery"
