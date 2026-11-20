@@ -187,7 +187,10 @@ class OWCordClient:
   fn can_moderate(guild_id, actor_id, target_id, action):
     set guild: this.guild_get(guild_id)
     set actor: this.guild_member(guild_id, actor_id)
-    set target: this.guild_member(guild_id, target_id)
+    # Banned users are no longer members; unbanning checks only actor rights.
+    set target: {user_id: target_id, roles: []}
+    if: action != "unban"
+      set target: this.guild_member(guild_id, target_id)
     set roles: this.guild_roles(guild_id)
     return: this.rest.permission_can_moderate(json(guild), json(actor), json(target), json(roles), action)
 
