@@ -34,3 +34,31 @@ class DiscordUI:
   # style 1=short, 2=paragraph. Required is a boolean.
   fn text_input(id, placeholder, style, required):
     return: {type: 4, custom_id: id, placeholder: placeholder, style: style, required: required}
+
+  # Components V2 messages cannot contain legacy content or embeds.
+  fn v2_message(components):
+    return: json({flags: 32768, components: components})
+
+  fn v2_text(content):
+    return: {type: 10, content: content}
+
+  fn v2_separator(divider, spacing):
+    return: {type: 14, divider: divider, spacing: spacing}
+
+  # Accent: 0..16777215; use -1 to omit the color.
+  fn v2_container(children, accent_color):
+    if: accent_color < 0
+      return: {type: 17, components: children}
+    return: {type: 17, components: children, accent_color: accent_color}
+
+  fn v2_section(text_displays, accessory):
+    return: {type: 9, components: text_displays, accessory: accessory}
+
+  fn v2_thumbnail(https_url):
+    return: {type: 11, media: {url: https_url}}
+
+  fn v2_gallery(items):
+    return: {type: 12, items: items}
+
+  fn v2_media_item(https_url, description, spoiler):
+    return: {media: {url: https_url}, description: description, spoiler: spoiler}

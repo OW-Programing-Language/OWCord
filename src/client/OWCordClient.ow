@@ -35,6 +35,11 @@ class OWCordClient:
   fn subcommand_handler(name, path, handler):
     return: this.router.route(name, path, handler)
 
+  # Registers a global command with explicit installation/invocation contexts.
+  # E.g. GUILD_INSTALL=0, USER_INSTALL=1; GUILD=0, BOT_DM=1, PRIVATE_CHANNEL=2.
+  fn command_global(name, description, handler, contexts, installs):
+    return: this.router.add_global(name, description, handler, contexts, installs)
+
   fn command_count():
     return: this.router.count()
 
@@ -48,7 +53,10 @@ class OWCordClient:
       set required: this.router.permissions(name)
       set status: 0
       set schema: this.router.options(name)
-      if: schema != ""
+      set scope: this.router.global_scope(name)
+      if: map_has(scope, "contexts")
+        set status: this.rest.register_global_context_command(name, this.router.description(name), json(scope.contexts), json(scope.integrations))
+      else if: schema != ""
         set status: this.rest.register_dev_command_options(name, this.router.description(name), schema, required)
       else if: required == ""
         set status: this.rest.register_dev_command(name, this.router.description(name))
@@ -98,6 +106,34 @@ class OWCordClient:
 
   fn show_modal(event, modal_json):
     return: this.rest.open_modal(event.id, event.token, modal_json)
+
+  # Components V2 and interaction response editing/deleting.
+  fn v2_create(channel_id, payload_json):
+    return: this.rest.v2_create(channel_id, payload_json)
+
+  fn v2_reply(event, payload_json, private):
+    return: this.rest.v2_reply(event.id, event.token, payload_json, private)
+
+  fn v2_update(event, payload_json):
+    return: this.rest.v2_update(event.id, event.token, payload_json)
+
+  fn v2_followup(event, payload_json, private):
+    return: this.rest.v2_followup(event.token, payload_json, private)
+
+  fn defer_component_update(event):
+    return: this.rest.defer_component_update(event.id, event.token)
+
+  fn edit_original(event, content):
+    return: json_parse(this.rest.edit_original(event.token, content))
+
+  fn delete_original(event):
+    return: this.rest.delete_original(event.token)
+
+  fn edit_followup(event, message_id, content):
+    return: json_parse(this.rest.edit_followup(event.token, message_id, content))
+
+  fn delete_followup(event, message_id):
+    return: this.rest.delete_followup(event.token, message_id)
 
   fn modal_value(event, id, fallback):
     return: this.parser.modal_value(event, id, fallback)

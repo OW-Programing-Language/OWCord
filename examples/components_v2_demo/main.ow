@@ -1,0 +1,35 @@
+# OWCord v0.10 — Components V2 test. Creates and removes ONLY its own message.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+import "../../src/components/DiscordUI.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "v0.10: flOW boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+  set ui: new DiscordUI()
+  set channel: extension("owcord.test.channel_id")
+
+  set section: ui.v2_section([ui.v2_text("Try this button.")], ui.button("owcord10_details", "Details", 1))
+  set panel: ui.v2_container([
+    ui.v2_text("## OWCord Components V2"),
+    ui.v2_separator(true, 1),
+    section
+  ], 5793266)
+
+  set payload: ui.v2_message([panel])
+  set created_id: bot.v2_create(channel, payload)
+  call: assert(created_id != "", "v0.10: message sent")
+  set fetched: bot.message_get(channel, created_id)
+  call: assert(fetched.id == created_id, "v0.10: message fetched")
+  call: assert(bot.message_delete(channel, created_id) == 204, "v0.10: cleanup")
+  call: assert(app.stop() == 1, "v0.10: clean shutdown")
+  print: "LIVE PASS: created and cleaned up Components V2 message"

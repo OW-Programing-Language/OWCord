@@ -45,6 +45,8 @@ final class DiscordRateLimiter {
             return method + " channels/*";
         if (path.matches("interactions/[0-9]+/[^/]+/callback"))
             return method + " interactions/*/callback";
+        if (path.matches("webhooks/[0-9]+/[^/]+/messages/(?:@original|[0-9]+)"))
+            return method + " webhooks/*/messages/*";
         if (path.matches("webhooks/[0-9]+/[^/]+"))
             return method + " webhooks/*";
         return method + " " + path;
