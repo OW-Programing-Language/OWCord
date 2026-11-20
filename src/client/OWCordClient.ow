@@ -275,3 +275,9 @@ class OWCordClient:
 
   fn shard_status():
     return: json_parse(this.gateway.shard_status())
+  # v0.13: safe, bounded REST telemetry; no token/URL/body fields.
+  fn rest_metrics():
+    return: json_parse(this.rest.metrics())
+
+  fn rest_last_error():
+    return: json_parse(this.rest.last_error())

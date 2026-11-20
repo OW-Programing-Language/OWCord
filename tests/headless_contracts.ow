@@ -169,6 +169,10 @@ module OWCord.MockRest: DISCORD_REST
     return: 204
   fn register_global_context_command(name string, description string, contexts_json string, integrations_json string) -> int:
     return: 201
+  fn metrics() -> string:
+    return: "{\"attempts\":9,\"completed\":9,\"successful\":8,\"failed\":1,\"rate_limited\":0,\"retries\":0,\"transport_errors\":0,\"latency_lt_250ms\":9,\"latency_250_999ms\":0,\"latency_ge_1000ms\":0,\"route_limit\":32,\"routes\":[{\"route\":\"GET guilds/*\",\"completed\":9,\"failed\":1}]}"
+  fn last_error() -> string:
+    return: "{\"present\":true,\"status\":403,\"category\":\"forbidden\",\"route\":\"GET guilds/*\",\"request_id\":\"rest-1\",\"discord_code\":\"50013\",\"retryable\":false}"
 
 main:
   set app: new App()

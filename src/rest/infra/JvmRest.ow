@@ -123,3 +123,7 @@ module OWCord.JvmRest: DISCORD_REST
     return: extension("owcord.interaction.delete_followup", interaction_token, message_id)
   fn register_global_context_command(name string, description string, contexts_json string, integrations_json string) -> int:
     return: extension("owcord.rest.global_context_command", name, description, contexts_json, integrations_json)
+  fn metrics() -> string:
+    return: extension("owcord.rest.metrics")
+  fn last_error() -> string:
+    return: extension("owcord.rest.last_error")

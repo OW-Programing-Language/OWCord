@@ -49,7 +49,10 @@ final class DiscordRateLimiter {
             return method + " webhooks/*/messages/*";
         if (path.matches("webhooks/[0-9]+/[^/]+"))
             return method + " webhooks/*";
-        return method + " " + path;
+        // Unknown future endpoints must not retain raw webhook/interaction
+        // tokens, snowflakes, queries or attachment references in telemetry.
+        if(clean.equals("gateway/bot")) return method+" gateway/bot";
+        return method+" other/*";
     }
 
     /** Major Discord resource identifiers are not included in X-RateLimit-Bucket. */

@@ -1,0 +1,24 @@
+# OWCord v0.13: read-only REST telemetry inspection.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "rest diagnostics: boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+  set metrics: bot.rest_metrics()
+  print: "Discord requests attempted: " + str(metrics.attempts)
+  print: "Successful responses: " + str(metrics.successful)
+  print: "Rate limited responses: " + str(metrics.rate_limited)
+  set last: bot.rest_last_error()
+  if: last.present == true
+    print: "Safe last HTTP category: " + last.category
+  call: assert(app.stop() == 1, "rest diagnostics: clean shutdown")
