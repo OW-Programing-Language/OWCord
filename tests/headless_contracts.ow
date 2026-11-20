@@ -23,6 +23,20 @@ module OWCord.MockGateway: DISCORD_GATEWAY
   fn poll(timeout_ms int) -> string:
     return: "{\"type\":\"NONE\",\"data\":{}}"
 
+  fn intents() -> string:
+    return: "{\"mask\":513,\"names\":[\"GUILDS\",\"GUILD_MESSAGES\"],\"privileged\":[],\"portal_configuration_required\":false}"
+  fn cache_stats() -> string:
+    return: "{\"mode\":\"metadata\",\"entries\":2,\"ttl_seconds\":60,\"max_entries\":64,\"hits\":1,\"misses\":0,\"evictions\":0,\"invalidations\":0}"
+  fn cache_guild(id string) -> string:
+    return: "{\"found\":true,\"partial\":true,\"data\":{\"id\":\"111\",\"name\":\"OW Test\"}}"
+  fn cache_channel(id string) -> string:
+    return: "{\"found\":true,\"partial\":true,\"data\":{\"id\":\"333\",\"guild_id\":\"111\",\"name\":\"general\"}}"
+  fn cache_member(guild_id string, user_id string) -> string:
+    return: "{\"found\":false}"
+  fn cache_clear() -> int:
+    return: 1
+
+
 module OWCord.MockRest: DISCORD_REST
   fn name() -> string:
     return: "rest"

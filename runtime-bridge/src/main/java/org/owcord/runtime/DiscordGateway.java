@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 final class DiscordGateway implements AutoCloseable {
     private final DiscordRest rest;
     private final int intents;
+    private final GatewayEventCache cache;
     private final ArrayBlockingQueue<String> events = new ArrayBlockingQueue<>(1024);
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "owcord-gateway"); t.setDaemon(true); return t;
@@ -38,7 +39,17 @@ final class DiscordGateway implements AutoCloseable {
     private volatile boolean ready;
     private volatile boolean ack = true;
 
-    DiscordGateway(DiscordRest rest, int intents) { this.rest = rest; this.intents = intents; }
+    DiscordGateway(DiscordRest rest, int intents) {
+        this(rest, intents, GatewayEventCache.Config.fromEnvironment());
+    }
+    DiscordGateway(DiscordRest rest, int intents, GatewayEventCache.Config cacheConfig) {
+        GatewayIntents.parse(Integer.toString(intents));
+        this.rest = rest;
+        this.intents = intents;
+        this.cache = new GatewayEventCache(cacheConfig);
+    }
+    GatewayEventCache cache() { return cache; }
+    int requestedIntents() { return intents; }
 
     int connect() {
         if (!running.compareAndSet(false, true)) return 1;
@@ -88,6 +99,12 @@ final class DiscordGateway implements AutoCloseable {
                     ready = true;
                     reconnectPolicy.reset();
                 }
+                // Cache only approved metadata, before delivery to OW. A malformed
+                // cache projection must not drop the original Gateway dispatch.
+                try { cache.apply(eventType, d); }
+                catch (RuntimeException ignored) {
+                    System.err.println("OWCord: malformed cache metadata ignored");
+                }
                 // OW's current JSON parser does not understand exponent notation (1.23E18).
                 // Discord can include large numeric metadata in Gateway events.
                 // Preserve the payload as far as possible and make re-encoding parseable.
@@ -110,7 +127,10 @@ final class DiscordGateway implements AutoCloseable {
             case 9 -> {
                 // Discord can indicate whether the previous session is resumable.
                 // A false/absent flag requires a fresh Identify, not a Resume loop.
-                if (!Boolean.TRUE.equals(e.get("d"))) resetSession();
+                if (!Boolean.TRUE.equals(e.get("d"))) {
+                    resetSession();
+                    cache.clear();
+                }
                 ready = false;
                 if (ws != null) ws.abort();
                 reconnect();
@@ -211,6 +231,7 @@ final class DiscordGateway implements AutoCloseable {
         if (socket != null) socket.abort();
         socket = null;
         timer.shutdownNow();
+        cache.clear();
     }
 
     private final class Listener implements WebSocket.Listener {
@@ -242,7 +263,10 @@ final class DiscordGateway implements AutoCloseable {
             synchronized (DiscordGateway.this) {
                 if (heartbeat != null) heartbeat.cancel(false);
             }
-            if (requiresFreshSession(code)) resetSession();
+            if (requiresFreshSession(code)) {
+                resetSession();
+                cache.clear();
+            }
             if (isFatalCloseCode(code)) {
                 running.set(false);
                 push("{\"type\":\"ERROR\",\"data\":{\"reason\":\"Gateway rejected session or configuration\"}}");

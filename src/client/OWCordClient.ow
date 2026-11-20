@@ -251,3 +251,21 @@ class OWCordClient:
 
   fn moderation_clear_timeout(guild_id, user_id, reason):
     return: json_parse(this.rest.moderation_clear_timeout(guild_id, user_id, reason))
+  # v0.11 cache is optional and returns partial Gateway snapshots, not REST truth.
+  fn gateway_intents():
+    return: json_parse(this.gateway.intents())
+
+  fn gateway_cache_stats():
+    return: json_parse(this.gateway.cache_stats())
+
+  fn cached_guild(id):
+    return: json_parse(this.gateway.cache_guild(id))
+
+  fn cached_channel(id):
+    return: json_parse(this.gateway.cache_channel(id))
+
+  fn cached_member(guild_id, user_id):
+    return: json_parse(this.gateway.cache_member(guild_id, user_id))
+
+  fn clear_gateway_cache():
+    return: this.gateway.cache_clear()

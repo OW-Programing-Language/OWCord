@@ -52,3 +52,57 @@ fn preservesUnknownEventsRatherThanFabricatingLifecycle():
   set unknown: parser.decode("{\"type\":\"SOME_NEW_DISCORD_EVENT\",\"data\":{\"id\":\"10\"}}")
   call: assert(unknown.kind == "other")
   call: assert(unknown.name == "SOME_NEW_DISCORD_EVENT")
+
+
+@Test
+fn preservesPartialMessageUpdatesWithoutFabricatingContent():
+  set parser: new EventParser()
+  set sparse: parser.decode("{\"type\":\"MESSAGE_UPDATE\",\"data\":{\"id\":\"101\",\"channel_id\":\"202\"}}")
+  call: assert(sparse.kind == "message")
+  call: assert(sparse.partial == true)
+  call: assert(sparse.content_present == false)
+  call: assert(sparse.content == "")
+  set cleared: parser.decode("{\"type\":\"MESSAGE_UPDATE\",\"data\":{\"id\":\"101\",\"channel_id\":\"202\",\"content\":\"\"}}")
+  call: assert(cleared.content_present == true)
+  call: assert(cleared.content == "")
+  set created: parser.decode("{\"type\":\"MESSAGE_CREATE\",\"data\":{\"id\":\"101\",\"content\":\"hi\"}}")
+  call: assert(created.content_present == true)
+  call: assert(created.partial == false)
+
+@Test
+fn typedRoleEventsRetainPartialPayloadAndIds():
+  set parser: new EventParser()
+  set created: parser.decode("{\"type\":\"GUILD_ROLE_CREATE\",\"data\":{\"guild_id\":\"30\",\"role\":{\"id\":\"44\",\"name\":\"Blue\"}}}")
+  call: assert(created.kind == "role")
+  call: assert(created.action == "create")
+  call: assert(created.role_id == "44")
+  call: assert(created.role.name == "Blue")
+  set changed: parser.decode("{\"type\":\"GUILD_ROLE_UPDATE\",\"data\":{\"guild_id\":\"30\",\"role\":{\"id\":\"44\"}}}")
+  call: assert(changed.action == "update")
+  call: assert(changed.partial == true)
+  call: assert(changed.role_id == "44")
+  set deleted: parser.decode("{\"type\":\"GUILD_ROLE_DELETE\",\"data\":{\"guild_id\":\"30\",\"role_id\":\"44\"}}")
+  call: assert(deleted.action == "delete")
+  call: assert(deleted.role_id == "44")
+
+@Test
+fn typedThreadsAndReactionsKeepDiscordSnowflakesAsStrings():
+  set parser: new EventParser()
+  set thread: parser.decode("{\"type\":\"THREAD_CREATE\",\"data\":{\"id\":\"9001\",\"guild_id\":\"30\",\"parent_id\":\"44\"}}")
+  call: assert(thread.kind == "thread")
+  call: assert(thread.thread_id == "9001")
+  call: assert(thread.channel_id == "44")
+  set updated: parser.decode("{\"type\":\"THREAD_UPDATE\",\"data\":{\"id\":\"9001\",\"guild_id\":\"30\"}}")
+  call: assert(updated.partial == true)
+  set reaction: parser.decode("{\"type\":\"MESSAGE_REACTION_ADD\",\"data\":{\"guild_id\":\"30\",\"channel_id\":\"44\",\"message_id\":\"9001\",\"user_id\":\"222\",\"emoji\":{\"id\":null,\"name\":\"👍\"}}}")
+  call: assert(reaction.kind == "reaction")
+  call: assert(reaction.action == "add")
+  call: assert(reaction.message_id == "9001")
+  call: assert(reaction.user_id == "222")
+  call: assert(reaction.emoji.name == "👍")
+  set removed: parser.decode("{\"type\":\"MESSAGE_REACTION_REMOVE_ALL\",\"data\":{\"message_id\":\"9001\",\"channel_id\":\"44\"}}")
+  call: assert(removed.action == "remove_all")
+  set bulk: parser.decode("{\"type\":\"MESSAGE_DELETE_BULK\",\"data\":{\"guild_id\":\"30\",\"channel_id\":\"44\",\"ids\":[\"9001\"]}}")
+  call: assert(bulk.kind == "message_bulk")
+  call: assert(bulk.action == "delete")
+  call: assert(bulk.payload.ids[0] == "9001")

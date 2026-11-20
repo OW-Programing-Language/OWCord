@@ -41,7 +41,10 @@ jobs:
       DISCORD_APPLICATION_ID: ${{ inputs.application_id || '1572864462447181954' }}
       DISCORD_GUILD_ID: ${{ inputs.guild_id || '1321509685031075911' }}
       DISCORD_TEST_CHANNEL_ID: ${{ inputs.channel_id || '1459838511485157481' }}
-      OWCORD_GATEWAY_INTENTS: '513'
+      OWCORD_GATEWAY_INTENTS: 'GUILDS,GUILD_MESSAGES'
+      OWCORD_CACHE_MODE: 'metadata'
+      OWCORD_CACHE_MAX_ENTRIES: '64'
+      OWCORD_CACHE_TTL_SECONDS: '120'
     steps:
       - name: Check that development credentials are configured
         shell: bash
