@@ -28,7 +28,12 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.permissions.role_manageable", "owcord.moderation.kick",
         "owcord.moderation.ban", "owcord.moderation.unban",
         "owcord.moderation.timeout", "owcord.moderation.clear_timeout",
-        "owcord.test.application_id");
+        "owcord.test.application_id",
+        "owcord.v2.message_create", "owcord.v2.reply", "owcord.v2.update",
+        "owcord.v2.followup", "owcord.rest.component_defer_update",
+        "owcord.interaction.edit_original", "owcord.interaction.delete_original",
+        "owcord.interaction.edit_followup", "owcord.interaction.delete_followup",
+        "owcord.rest.global_context_command");
     private DiscordRest rest;
     private DiscordGateway gateway;
 
@@ -38,13 +43,16 @@ public final class OWCordExtension implements RuntimeExtension {
         if (!supports(op)) throw new IllegalArgumentException("Unknown OWCord operation");
         int required = switch (op) {
             case "owcord.gateway.poll", "owcord.guild.get",
-                 "owcord.guild.channels", "owcord.channel.get", "owcord.guild.roles" -> 1;
+                 "owcord.guild.channels", "owcord.channel.get", "owcord.guild.roles",
+                 "owcord.interaction.delete_original" -> 1;
             case "owcord.rest.dev_command", "owcord.rest.message",
                  "owcord.rest.followup", "owcord.rest.followup_private",
                  "owcord.rest.send_rich", "owcord.permissions.has",
                  "owcord.rest.message_create", "owcord.rest.message_get",
                  "owcord.rest.message_delete", "owcord.guild.member",
-                 "owcord.channel.delete" -> 2;
+                 "owcord.channel.delete", "owcord.v2.message_create",
+                 "owcord.rest.component_defer_update",
+                 "owcord.interaction.edit_original", "owcord.interaction.delete_followup" -> 2;
             case "owcord.rest.reply", "owcord.rest.reply_private",
                  "owcord.rest.defer", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
                  "owcord.rest.update_component", "owcord.rest.open_modal",
@@ -53,13 +61,15 @@ public final class OWCordExtension implements RuntimeExtension {
                  "owcord.rest.reaction_remove", "owcord.guild.members",
                  "owcord.guild.role_create", "owcord.guild.role_delete",
                  "owcord.moderation.kick", "owcord.moderation.unban",
-                 "owcord.moderation.clear_timeout" -> 3;
+                 "owcord.moderation.clear_timeout", "owcord.v2.update",
+                 "owcord.v2.followup", "owcord.interaction.edit_followup" -> 3;
             case "owcord.rest.dev_command_options", "owcord.rest.message_list",
                  "owcord.guild.channel_create", "owcord.channel.edit",
                  "owcord.guild.role_edit", "owcord.guild.member_role_add",
                  "owcord.guild.member_role_remove", "owcord.permissions.effective",
                  "owcord.permissions.role_manageable", "owcord.moderation.ban",
-                 "owcord.moderation.timeout" -> 4;
+                 "owcord.moderation.timeout", "owcord.v2.reply",
+                 "owcord.rest.global_context_command" -> 4;
             case "owcord.rest.reaction_users", "owcord.permissions.can_moderate" -> 5;
             default -> 0;
         };
@@ -90,6 +100,27 @@ public final class OWCordExtension implements RuntimeExtension {
                 arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
             case "owcord.rest.autocomplete" -> rest().replyAutocomplete(
                 arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.rest.global_context_command" -> rest().registerGlobalContextCommand(
+                requiredEnv("DISCORD_APPLICATION_ID"), arg(args, 0), arg(args, 1),
+                arg(args, 2), arg(args, 3));
+            case "owcord.v2.message_create" -> rest().createV2Message(arg(args, 0), arg(args, 1));
+            case "owcord.v2.reply" -> rest().replyV2Interaction(
+                arg(args, 0), arg(args, 1), arg(args, 2), privacyArg(args, 3));
+            case "owcord.v2.update" -> rest().updateV2Component(
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.v2.followup" -> rest().createV2Followup(
+                requiredEnv("DISCORD_APPLICATION_ID"), arg(args, 0), arg(args, 1),
+                privacyArg(args, 2));
+            case "owcord.rest.component_defer_update" -> rest().deferComponentUpdate(
+                arg(args, 0), arg(args, 1));
+            case "owcord.interaction.edit_original" -> rest().editOriginalResponse(
+                requiredEnv("DISCORD_APPLICATION_ID"), arg(args, 0), arg(args, 1));
+            case "owcord.interaction.delete_original" -> rest().deleteOriginalResponse(
+                requiredEnv("DISCORD_APPLICATION_ID"), arg(args, 0));
+            case "owcord.interaction.edit_followup" -> rest().editFollowupResponse(
+                requiredEnv("DISCORD_APPLICATION_ID"), arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.interaction.delete_followup" -> rest().deleteFollowupResponse(
+                requiredEnv("DISCORD_APPLICATION_ID"), arg(args, 0), arg(args, 1));
             case "owcord.permissions.has" -> DiscordPermissions.memberCan(arg(args, 0), arg(args, 1)) ? 1 : 0;
             case "owcord.rest.reply" -> rest().replyInteraction(
                 arg(args, 0), arg(args, 1), arg(args, 2));
@@ -185,6 +216,13 @@ public final class OWCordExtension implements RuntimeExtension {
             throw new IllegalArgumentException("Argument " + index + " must be a string");
         return value;
     }
+    private static boolean privacyArg(List<Object> args, int index) {
+        int flag = intArg(args, index);
+        if (flag != 0 && flag != 1)
+            throw new IllegalArgumentException("Visibility must be 0 or 1");
+        return flag == 1;
+    }
+
     private static int intArg(List<Object> args, int index) {
         Object value = args.get(index);
         if (!(value instanceof Number n) || n.doubleValue() != Math.rint(n.doubleValue()) ||

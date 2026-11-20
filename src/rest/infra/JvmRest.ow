@@ -103,3 +103,23 @@ module OWCord.JvmRest: DISCORD_REST
     return: extension("owcord.moderation.timeout", guild_id, user_id, until_iso, reason)
   fn moderation_clear_timeout(guild_id string, user_id string, reason string) -> string:
     return: extension("owcord.moderation.clear_timeout", guild_id, user_id, reason)
+  fn v2_create(channel_id string, payload_json string) -> string:
+    return: extension("owcord.v2.message_create", channel_id, payload_json)
+  fn v2_reply(interaction_id string, interaction_token string, payload_json string, private int) -> int:
+    return: extension("owcord.v2.reply", interaction_id, interaction_token, payload_json, private)
+  fn v2_update(interaction_id string, interaction_token string, payload_json string) -> int:
+    return: extension("owcord.v2.update", interaction_id, interaction_token, payload_json)
+  fn v2_followup(interaction_token string, payload_json string, private int) -> string:
+    return: extension("owcord.v2.followup", interaction_token, payload_json, private)
+  fn defer_component_update(interaction_id string, interaction_token string) -> int:
+    return: extension("owcord.rest.component_defer_update", interaction_id, interaction_token)
+  fn edit_original(interaction_token string, content string) -> string:
+    return: extension("owcord.interaction.edit_original", interaction_token, content)
+  fn delete_original(interaction_token string) -> int:
+    return: extension("owcord.interaction.delete_original", interaction_token)
+  fn edit_followup(interaction_token string, message_id string, content string) -> string:
+    return: extension("owcord.interaction.edit_followup", interaction_token, message_id, content)
+  fn delete_followup(interaction_token string, message_id string) -> int:
+    return: extension("owcord.interaction.delete_followup", interaction_token, message_id)
+  fn register_global_context_command(name string, description string, contexts_json string, integrations_json string) -> int:
+    return: extension("owcord.rest.global_context_command", name, description, contexts_json, integrations_json)

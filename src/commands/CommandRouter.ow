@@ -6,6 +6,7 @@ class CommandRouter:
   field command_permissions
   field command_schemas
   field routes
+  field global_scopes
 
   fn new():
     set this.handlers: {}
@@ -13,6 +14,7 @@ class CommandRouter:
     set this.command_permissions: {}
     set this.command_schemas: {}
     set this.routes: {}
+    set this.global_scopes: {}
     return: 0
 
   fn add(name, description, handler):
@@ -72,6 +74,15 @@ class CommandRouter:
 
   fn options(name):
     return: map_get(this.command_schemas, name, "")
+
+  fn add_global(name, description, handler, contexts, installs):
+    set added: this.add(name, description, handler)
+    if: added == 1
+      call: map_set(this.global_scopes, name, {contexts: contexts, integrations: installs})
+    return: added
+
+  fn global_scope(name):
+    return: map_get(this.global_scopes, name, {})
 
   fn permissions(name):
     return: map_get(this.command_permissions, name, "")

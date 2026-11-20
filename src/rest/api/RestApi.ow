@@ -45,3 +45,13 @@ module_type DISCORD_REST:
   fn moderation_unban(guild_id string, user_id string, reason string) -> int
   fn moderation_timeout(guild_id string, user_id string, until_iso string, reason string) -> string
   fn moderation_clear_timeout(guild_id string, user_id string, reason string) -> string
+  fn v2_create(channel_id string, payload_json string) -> string
+  fn v2_reply(interaction_id string, interaction_token string, payload_json string, private int) -> int
+  fn v2_update(interaction_id string, interaction_token string, payload_json string) -> int
+  fn v2_followup(interaction_token string, payload_json string, private int) -> string
+  fn defer_component_update(interaction_id string, interaction_token string) -> int
+  fn edit_original(interaction_token string, content string) -> string
+  fn delete_original(interaction_token string) -> int
+  fn edit_followup(interaction_token string, message_id string, content string) -> string
+  fn delete_followup(interaction_token string, message_id string) -> int
+  fn register_global_context_command(name string, description string, contexts_json string, integrations_json string) -> int

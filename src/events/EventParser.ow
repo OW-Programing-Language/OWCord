@@ -8,7 +8,7 @@ class EventParser:
     set envelope: json_parse(raw)
     set event_type: map_get(envelope, "type", "NONE")
     set data: map_get(envelope, "data", {})
-    set event: {kind: "other", name: "", handler: "", id: "", token: "", guild_id: "", channel_id: "", user_id: "", custom_id: "", content: "", options: [], values: [], fields: [], action: "", member_permissions: "", app_permissions: "", path: "", subcommand: "", group: "", focused: "", focused_value: "", payload: data}
+    set event: {kind: "other", name: "", handler: "", id: "", token: "", guild_id: "", channel_id: "", user_id: "", custom_id: "", content: "", options: [], values: [], fields: [], action: "", member_permissions: "", app_permissions: "", context: -1, integration_owners: {}, locale: "", path: "", subcommand: "", group: "", focused: "", focused_value: "", payload: data}
 
     if: event_type == "NONE"
       call: map_set(event, "kind", "none")
@@ -120,6 +120,9 @@ class EventParser:
       call: map_set(event, "token", map_get(data, "token", ""))
       call: map_set(event, "guild_id", map_get(data, "guild_id", ""))
       call: map_set(event, "channel_id", map_get(data, "channel_id", ""))
+      call: map_set(event, "context", map_get(data, "context", -1))
+      call: map_set(event, "integration_owners", map_get(data, "authorizing_integration_owners", {}))
+      call: map_set(event, "locale", map_get(data, "locale", ""))
       set member: map_get(data, "member", {})
       call: map_set(event, "member_permissions", map_get(member, "permissions", ""))
       call: map_set(event, "app_permissions", map_get(data, "app_permissions", ""))
