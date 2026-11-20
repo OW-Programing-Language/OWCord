@@ -179,6 +179,105 @@ final class DiscordRest {
         return DiscordMessageModel.users(r.body());
     }
 
+    // v0.8: read-only guild, channel, member and role information.
+    String getGuild(String guildId) {
+        HttpResponse<String> r = request("GET", "guilds/" + snowflake(guildId), "", true);
+        check(r);
+        return DiscordGuildModel.guild(r.body());
+    }
+
+    String listGuildChannels(String guildId) {
+        HttpResponse<String> r = request("GET", "guilds/" + snowflake(guildId) + "/channels", "", true);
+        check(r);
+        return DiscordGuildModel.channels(r.body());
+    }
+
+    String getChannel(String channelId) {
+        HttpResponse<String> r = request("GET", "channels/" + snowflake(channelId), "", true);
+        check(r);
+        return DiscordGuildModel.channel(r.body());
+    }
+
+    String listGuildRoles(String guildId) {
+        HttpResponse<String> r = request("GET", "guilds/" + snowflake(guildId) + "/roles", "", true);
+        check(r);
+        return DiscordGuildModel.roles(r.body());
+    }
+
+    String getGuildMember(String guildId, String userId) {
+        String path = "guilds/" + snowflake(guildId) + "/members/" + snowflake(userId);
+        HttpResponse<String> r = request("GET", path, "", true);
+        check(r);
+        return DiscordGuildModel.member(r.body());
+    }
+
+    String listGuildMembers(String guildId, String afterId, int limit) {
+        if (limit < 1 || limit > 1000) throw new IllegalArgumentException("Member page limit must be 1-1000");
+        String path = "guilds/" + snowflake(guildId) + "/members?limit=" + limit;
+        if (!afterId.isEmpty()) path += "&after=" + snowflake(afterId);
+        HttpResponse<String> r = request("GET", path, "", true);
+        check(r);
+        return DiscordGuildModel.members(r.body());
+    }
+
+    // Mutations intentionally require explicit audit reasons and are NEVER used
+    // by the live development guild smoke test.
+    String createTextChannel(String guildId, String name, String topic, String reason) {
+        HttpResponse<String> r = request("POST", "guilds/" + snowflake(guildId) + "/channels",
+            DiscordGuildPayload.newTextChannel(name, topic), true, reason);
+        check(r);
+        return DiscordGuildModel.channel(r.body());
+    }
+
+    String editTextChannel(String channelId, String name, String topic, String reason) {
+        HttpResponse<String> r = request("PATCH", "channels/" + snowflake(channelId),
+            DiscordGuildPayload.updateTextChannel(name, topic), true, reason);
+        check(r);
+        return DiscordGuildModel.channel(r.body());
+    }
+
+    int deleteChannel(String channelId, String reason) {
+        HttpResponse<String> r = request("DELETE", "channels/" + snowflake(channelId),
+            "", true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
+    String createSafeRole(String guildId, String name, String reason) {
+        HttpResponse<String> r = request("POST", "guilds/" + snowflake(guildId) + "/roles",
+            DiscordGuildPayload.newSafeRole(name), true, reason);
+        check(r);
+        return DiscordGuildModel.role(r.body());
+    }
+
+    String renameRole(String guildId, String roleId, String name, String reason) {
+        HttpResponse<String> r = request("PATCH", "guilds/" + snowflake(guildId)
+            + "/roles/" + snowflake(roleId), DiscordGuildPayload.renameRole(name), true, reason);
+        check(r);
+        return DiscordGuildModel.role(r.body());
+    }
+
+    int deleteRole(String guildId, String roleId, String reason) {
+        HttpResponse<String> r = request("DELETE", "guilds/" + snowflake(guildId)
+            + "/roles/" + snowflake(roleId), "", true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
+    int addMemberRole(String guildId, String userId, String roleId, String reason) {
+        HttpResponse<String> r = request("PUT", "guilds/" + snowflake(guildId)
+            + "/members/" + snowflake(userId) + "/roles/" + snowflake(roleId), "", true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
+    int removeMemberRole(String guildId, String userId, String roleId, String reason) {
+        HttpResponse<String> r = request("DELETE", "guilds/" + snowflake(guildId)
+            + "/members/" + snowflake(userId) + "/roles/" + snowflake(roleId), "", true, reason);
+        check(r);
+        return r.statusCode();
+    }
+
     static String reactionPath(String channel, String messageId, String emoji) {
         if (emoji == null || emoji.isBlank() || emoji.length() > 100)
             throw new IllegalArgumentException("Emoji must be nonempty and at most 100 characters");
@@ -266,12 +365,20 @@ final class DiscordRest {
      * interpreter. This is bounded (at most three HTTP attempts) and never
      * blindly retries IO failures or ambiguous 5xx POST results.
      */
-    private synchronized HttpResponse<String> request(String method, String path, String json, boolean auth) {
+    private HttpResponse<String> request(String method, String path, String json, boolean auth) {
+        return request(method, path, json, auth, null);
+    }
+
+    private synchronized HttpResponse<String> request(String method, String path, String json,
+                                                       boolean auth, String auditReason) {
+        // Check the reason before network activity, including blank/malformed values.
+        String encodedAuditReason = auditReason == null ? "" : DiscordGuildPayload.auditReason(auditReason);
         HttpRequest.Builder b = HttpRequest.newBuilder(base.resolve(path))
             .timeout(Duration.ofSeconds(12))
             .header("Accept", "application/json")
-            .header("User-Agent", "OWCord/0.4 (https://github.com/OW-Programing-Language/OWCord)");
+            .header("User-Agent", "OWCord/0.8 (https://github.com/OW-Programing-Language/OWCord)");
         if (auth) b.header("Authorization", "Bot " + token);
+        if (!encodedAuditReason.isEmpty()) b.header("X-Audit-Log-Reason", encodedAuditReason);
         switch (method) {
             case "POST", "PATCH" -> b.header("Content-Type", "application/json")
                 .method(method, HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));

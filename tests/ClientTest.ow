@@ -129,6 +129,48 @@ class FakeRest:
   fn reaction_users(channel_id, message_id, emoji, after, limit):
     return: "[\"66\"]"
 
+  fn guild_get(guild_id):
+    return: "{\"id\":\"111\",\"name\":\"OWCord test guild\",\"owner_id\":\"222\",\"description\":\"\",\"member_count\":0}"
+
+  fn guild_channels(guild_id):
+    return: "[{\"id\":\"333\",\"guild_id\":\"111\",\"name\":\"general\",\"topic\":\"\",\"parent_id\":\"\",\"type\":0,\"position\":0,\"nsfw\":false}]"
+
+  fn channel_get(channel_id):
+    return: "{\"id\":\"333\",\"guild_id\":\"111\",\"name\":\"general\",\"topic\":\"\",\"parent_id\":\"\",\"type\":0,\"position\":0,\"nsfw\":false}"
+
+  fn guild_roles(guild_id):
+    return: "[{\"id\":\"444\",\"name\":\"Tester\",\"permissions\":\"0\",\"position\":1,\"managed\":false,\"mentionable\":false}]"
+
+  fn guild_member(guild_id, user_id):
+    return: "{\"user_id\":\"222\",\"nick\":\"\",\"joined_at\":\"\",\"roles\":[\"444\"],\"pending\":false}"
+
+  fn guild_members(guild_id, after_id, limit):
+    return: "[{\"user_id\":\"222\",\"nick\":\"\",\"joined_at\":\"\",\"roles\":[\"444\"],\"pending\":false}]"
+
+  fn guild_channel_create(guild_id, name, topic, reason):
+    return: "{\"id\":\"555\",\"guild_id\":\"111\",\"name\":\"new\",\"topic\":\"\",\"parent_id\":\"\",\"type\":0,\"position\":0,\"nsfw\":false}"
+
+  fn channel_edit(channel_id, name, topic, reason):
+    return: "{\"id\":\"333\",\"guild_id\":\"111\",\"name\":\"renamed\",\"topic\":\"\",\"parent_id\":\"\",\"type\":0,\"position\":0,\"nsfw\":false}"
+
+  fn channel_delete(channel_id, reason):
+    return: 204
+
+  fn guild_role_create(guild_id, name, reason):
+    return: "{\"id\":\"666\",\"name\":\"Safe\",\"permissions\":\"0\",\"position\":1,\"managed\":false,\"mentionable\":false}"
+
+  fn guild_role_edit(guild_id, role_id, name, reason):
+    return: "{\"id\":\"444\",\"name\":\"Updated\",\"permissions\":\"0\",\"position\":1,\"managed\":false,\"mentionable\":false}"
+
+  fn guild_role_delete(guild_id, role_id, reason):
+    return: 204
+
+  fn guild_member_role_add(guild_id, user_id, role_id, reason):
+    return: 204
+
+  fn guild_member_role_remove(guild_id, user_id, role_id, reason):
+    return: 204
+
 @Test
 fn syncsAndRoutesCommandsWithMockTransport():
   set gateway: new FakeGateway()
@@ -244,3 +286,30 @@ fn managesMessagesAndReactionsThroughFakeTransport():
   call: assert(users[0] == "66")
   call: assert(bot.reaction_remove("55", id, "👍") == 204)
   call: assert(bot.message_delete("55", id) == 204)
+
+@Test
+fn guildRoleChannelAndMemberFacadeUsesExactIds():
+  set gateway: new FakeGateway()
+  set rest: new FakeRest()
+  set bot: new OWCordClient(gateway, rest)
+  set guild: bot.guild_get("111")
+  call: assert(guild.id == "111")
+  call: assert(guild.name == "OWCord test guild")
+  set channels: bot.guild_channels("111")
+  call: assert(len(channels) == 1)
+  call: assert(channels[0].name == "general")
+  call: assert(bot.channel_get("333").id == "333")
+  set roles: bot.guild_roles("111")
+  call: assert(roles[0].permissions == "0")
+  call: assert(bot.guild_member("111", "222").user_id == "222")
+  call: assert(bot.guild_members("111", "", 10)[0].roles[0] == "444")
+  set created_channel: bot.guild_channel_create("111", "new", "", "OWCord test")
+  call: assert(created_channel.id == "555")
+  call: assert(bot.channel_edit("333", "renamed", "", "OWCord test").name == "renamed")
+  call: assert(bot.channel_delete("333", "OWCord test") == 204)
+  set new_role: bot.guild_role_create("111", "Safe", "OWCord test")
+  call: assert(new_role.permissions == "0")
+  call: assert(bot.guild_role_edit("111", "444", "Updated", "OWCord test").name == "Updated")
+  call: assert(bot.guild_role_delete("111", "444", "OWCord test") == 204)
+  call: assert(bot.guild_member_role_add("111", "222", "444", "OWCord test") == 204)
+  call: assert(bot.guild_member_role_remove("111", "222", "444", "OWCord test") == 204)

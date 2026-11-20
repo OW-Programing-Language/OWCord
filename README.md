@@ -137,3 +137,9 @@ strings; the JVM REST bridge validates IDs, pagination and emoji paths.
 Read the [message/reaction guide](docs/MESSAGES-REACTIONS.md). Local HTTP tests
 exercise the full lifecycle and the existing secret-backed development-guild
 smoke test creates and cleans up its own test message.
+
+## v0.8 — Guild, channels, members & roles
+
+Read guild metadata, visible channels, roles and individual/paginated members using typed OW records. Manage text channels, create unprivileged roles and grant/revoke member roles using **explicit, validated audit reasons**. The live integration suite exercises only read-only operations; write operations are verified with local HTTP tests.
+
+See [v0.8 guild API guide](docs/GUILDS-CHANNELS-ROLES.md) and [read-only inspection example](examples/guild_inspect/main.ow).

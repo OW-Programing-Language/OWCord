@@ -9,7 +9,7 @@ public final class OWCordExtension implements RuntimeExtension {
     private static final Set<String> METHODS = Set.of(
         "owcord.gateway.connect", "owcord.gateway.connected", "owcord.gateway.poll",
         "owcord.gateway.disconnect", "owcord.rest.dev_command", "owcord.rest.reply",
-        "owcord.rest.message", "owcord.test.channel_id",
+        "owcord.rest.message", "owcord.test.channel_id", "owcord.test.guild_id",
         "owcord.rest.reply_private", "owcord.rest.defer",
         "owcord.rest.followup", "owcord.rest.followup_private",
         "owcord.rest.send_rich", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
@@ -18,7 +18,12 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.rest.dev_command_options", "owcord.rest.autocomplete",
         "owcord.rest.message_create", "owcord.rest.message_get", "owcord.rest.message_list",
         "owcord.rest.message_edit", "owcord.rest.message_delete",
-        "owcord.rest.reaction_add", "owcord.rest.reaction_remove", "owcord.rest.reaction_users");
+        "owcord.rest.reaction_add", "owcord.rest.reaction_remove", "owcord.rest.reaction_users",
+        "owcord.guild.get", "owcord.guild.channels", "owcord.channel.get", "owcord.guild.roles",
+        "owcord.guild.member", "owcord.guild.members", "owcord.guild.channel_create",
+        "owcord.channel.edit", "owcord.channel.delete", "owcord.guild.role_create",
+        "owcord.guild.role_edit", "owcord.guild.role_delete",
+        "owcord.guild.member_role_add", "owcord.guild.member_role_remove");
     private DiscordRest rest;
     private DiscordGateway gateway;
 
@@ -27,19 +32,25 @@ public final class OWCordExtension implements RuntimeExtension {
     @Override public synchronized Object invoke(String op, List<Object> args) {
         if (!supports(op)) throw new IllegalArgumentException("Unknown OWCord operation");
         int required = switch (op) {
-            case "owcord.gateway.poll" -> 1;
+            case "owcord.gateway.poll", "owcord.guild.get",
+                 "owcord.guild.channels", "owcord.channel.get", "owcord.guild.roles" -> 1;
             case "owcord.rest.dev_command", "owcord.rest.message",
                  "owcord.rest.followup", "owcord.rest.followup_private",
                  "owcord.rest.send_rich", "owcord.permissions.has",
                  "owcord.rest.message_create", "owcord.rest.message_get",
-                 "owcord.rest.message_delete" -> 2;
+                 "owcord.rest.message_delete", "owcord.guild.member",
+                 "owcord.channel.delete" -> 2;
             case "owcord.rest.reply", "owcord.rest.reply_private",
                  "owcord.rest.defer", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
                  "owcord.rest.update_component", "owcord.rest.open_modal",
                  "owcord.rest.dev_command_permissions", "owcord.rest.autocomplete",
                  "owcord.rest.message_edit", "owcord.rest.reaction_add",
-                 "owcord.rest.reaction_remove" -> 3;
-            case "owcord.rest.dev_command_options", "owcord.rest.message_list" -> 4;
+                 "owcord.rest.reaction_remove", "owcord.guild.members",
+                 "owcord.guild.role_create", "owcord.guild.role_delete" -> 3;
+            case "owcord.rest.dev_command_options", "owcord.rest.message_list",
+                 "owcord.guild.channel_create", "owcord.channel.edit",
+                 "owcord.guild.role_edit", "owcord.guild.member_role_add",
+                 "owcord.guild.member_role_remove" -> 4;
             case "owcord.rest.reaction_users" -> 5;
             default -> 0;
         };
@@ -87,6 +98,29 @@ public final class OWCordExtension implements RuntimeExtension {
                 arg(args, 0), arg(args, 1), arg(args, 2));
             case "owcord.rest.reaction_users" -> rest().reactionUsers(
                 arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3), intArg(args, 4));
+            case "owcord.guild.get" -> rest().getGuild(arg(args, 0));
+            case "owcord.guild.channels" -> rest().listGuildChannels(arg(args, 0));
+            case "owcord.channel.get" -> rest().getChannel(arg(args, 0));
+            case "owcord.guild.roles" -> rest().listGuildRoles(arg(args, 0));
+            case "owcord.guild.member" -> rest().getGuildMember(arg(args, 0), arg(args, 1));
+            case "owcord.guild.members" -> rest().listGuildMembers(
+                arg(args, 0), arg(args, 1), intArg(args, 2));
+            case "owcord.guild.channel_create" -> rest().createTextChannel(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
+            case "owcord.channel.edit" -> rest().editTextChannel(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
+            case "owcord.channel.delete" -> rest().deleteChannel(
+                arg(args, 0), arg(args, 1));
+            case "owcord.guild.role_create" -> rest().createSafeRole(
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.guild.role_edit" -> rest().renameRole(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
+            case "owcord.guild.role_delete" -> rest().deleteRole(
+                arg(args, 0), arg(args, 1), arg(args, 2));
+            case "owcord.guild.member_role_add" -> rest().addMemberRole(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
+            case "owcord.guild.member_role_remove" -> rest().removeMemberRole(
+                arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3));
             case "owcord.rest.reply_private" -> rest().replyInteraction(
                 arg(args, 0), arg(args, 1), arg(args, 2), true);
             case "owcord.rest.defer" -> {
@@ -109,6 +143,7 @@ public final class OWCordExtension implements RuntimeExtension {
             case "owcord.rest.open_modal" -> rest().openModal(
                 arg(args, 0), arg(args, 1), arg(args, 2));
             case "owcord.test.channel_id" -> requiredEnv("DISCORD_TEST_CHANNEL_ID");
+            case "owcord.test.guild_id" -> requiredEnv("DISCORD_GUILD_ID");
             default -> throw new IllegalArgumentException("Unsupported operation");
         };
     }
