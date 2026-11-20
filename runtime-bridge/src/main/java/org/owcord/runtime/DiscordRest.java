@@ -30,20 +30,12 @@ final class DiscordRest {
     }
     HttpClient http() { return http; }
 
-    String gatewayUrl() {
-        HttpResponse<String> response = request("GET", "gateway/bot", "", true);
+    GatewayBotInfo gatewayBotInfo() {
+        HttpResponse<String> response=request("GET","gateway/bot","",true);
         check(response);
-        Object json = Json.parse(response.body());
-        if (!(json instanceof Map<?, ?> map) || !(map.get("url") instanceof String url))
-            throw new IllegalStateException("Gateway URL missing");
-        URI ws = URI.create(url);
-        String host = ws.getHost();
-        if (!"wss".equals(ws.getScheme()) || host == null ||
-            !(host.equals("discord.gg") || host.endsWith(".discord.gg")
-              || host.equals("discord.com") || host.endsWith(".discord.com")))
-            throw new IllegalStateException("Invalid Gateway URL");
-        return url;
+        return GatewayBotInfo.parse(response.body());
     }
+    String gatewayUrl() { return gatewayBotInfo().url(); }
 
     int registerGuildCommand(String application, String guild, String name, String description) {
         return registerGuildCommand(application, guild, name, description, null);
