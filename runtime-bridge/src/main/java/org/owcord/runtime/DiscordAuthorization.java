@@ -94,6 +94,9 @@ final class DiscordAuthorization {
         };
         BigInteger granted = baseMask(guild, actor, roles);
         if (!granted.equals(ALL) && !granted.and(needed).equals(needed)) return false;
+        // An unbanned user is not a guild member, so no target role hierarchy
+        // exists. Only the BAN_MEMBERS permission is relevant here.
+        if ("unban".equals(action)) return true;
         if (actorId.equals(owner)) return true;
         if ("timeout".equals(action) || "untimeout".equals(action)) {
             if (baseMask(guild, target, roles).equals(ALL)) return false;
@@ -122,6 +125,11 @@ final class DiscordAuthorization {
         Map<String, Integer> positions = rolePositions(roles);
         Integer targetPosition = positions.get(wanted);
         if (targetPosition == null) throw new IllegalArgumentException("Unknown target role");
+        for (Object entry : roles) {
+            Map<?, ?> role = object(entry);
+            if (wanted.equals(id(role, "id")) && Boolean.TRUE.equals(role.get("managed")))
+                return false; // managed integration roles are never assignable
+        }
         return topPosition(actor, positions) > targetPosition;
     }
 
