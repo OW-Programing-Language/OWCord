@@ -37,7 +37,8 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.gateway.intents", "owcord.gateway.cache_stats",
         "owcord.gateway.cache_guild", "owcord.gateway.cache_channel",
         "owcord.gateway.cache_member", "owcord.gateway.cache_clear",
-        "owcord.gateway.shard_config", "owcord.gateway.shard_status");
+        "owcord.gateway.shard_config", "owcord.gateway.shard_status",
+        "owcord.rest.metrics", "owcord.rest.last_error");
     private DiscordRest rest;
     private DiscordShardManager gateway;
 
@@ -105,6 +106,8 @@ public final class OWCordExtension implements RuntimeExtension {
             case "owcord.gateway.cache_clear" -> activeGateway().cacheClear();
             case "owcord.gateway.shard_config" -> GatewayShardConfig.fromEnvironment().summary();
             case "owcord.gateway.shard_status" -> activeGateway().status();
+            case "owcord.rest.metrics" -> rest().metrics();
+            case "owcord.rest.last_error" -> rest().lastError();
             case "owcord.rest.dev_command" -> rest().registerGuildCommand(
                 requiredEnv("DISCORD_APPLICATION_ID"), requiredEnv("DISCORD_GUILD_ID"),
                 arg(args, 0), arg(args, 1));

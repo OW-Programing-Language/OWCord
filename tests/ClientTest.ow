@@ -255,6 +255,11 @@ class FakeRest:
   fn register_global_context_command(name, description, contexts_json, integrations_json):
     call: map_set(this.registered, name, contexts_json)
     return: 201
+  fn metrics():
+    return: "{\"attempts\":9,\"completed\":9,\"successful\":8,\"failed\":1,\"rate_limited\":0,\"retries\":0,\"transport_errors\":0,\"latency_lt_250ms\":9,\"latency_250_999ms\":0,\"latency_ge_1000ms\":0,\"route_limit\":32,\"routes\":[{\"route\":\"GET guilds/*\",\"completed\":9,\"failed\":1}]}"
+
+  fn last_error():
+    return: "{\"present\":true,\"status\":403,\"category\":\"forbidden\",\"route\":\"GET guilds/*\",\"request_id\":\"rest-1\",\"discord_code\":\"50013\",\"retryable\":false}"
 
 @Test
 fn syncsAndRoutesCommandsWithMockTransport():
@@ -485,3 +490,19 @@ fn exposesShardAssignmentsAndPerShardHealth():
   call: assert(status.all_ready == true)
   call: assert(status.shards[0].shard_id == 0)
   call: assert(status.shards[0].ready == true)
+
+
+@Test
+fn returnsSanitizedRESTDiagnosticsThroughOWClient():
+  set bot: new OWCordClient(new FakeGateway(), new FakeRest())
+  set telemetry: bot.rest_metrics()
+  call: assert(telemetry.attempts == 9)
+  call: assert(telemetry.successful == 8)
+  call: assert(telemetry.route_limit == 32)
+  call: assert(telemetry.routes[0].route == "GET guilds/*")
+  set failure: bot.rest_last_error()
+  call: assert(failure.present == true)
+  call: assert(failure.status == 403)
+  call: assert(failure.category == "forbidden")
+  call: assert(failure.discord_code == "50013")
+  call: assert(failure.retryable == false)
