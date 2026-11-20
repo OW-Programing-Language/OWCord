@@ -33,7 +33,10 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.v2.followup", "owcord.rest.component_defer_update",
         "owcord.interaction.edit_original", "owcord.interaction.delete_original",
         "owcord.interaction.edit_followup", "owcord.interaction.delete_followup",
-        "owcord.rest.global_context_command");
+        "owcord.rest.global_context_command",
+        "owcord.gateway.intents", "owcord.gateway.cache_stats",
+        "owcord.gateway.cache_guild", "owcord.gateway.cache_channel",
+        "owcord.gateway.cache_member", "owcord.gateway.cache_clear");
     private DiscordRest rest;
     private DiscordGateway gateway;
 
@@ -44,7 +47,8 @@ public final class OWCordExtension implements RuntimeExtension {
         int required = switch (op) {
             case "owcord.gateway.poll", "owcord.guild.get",
                  "owcord.guild.channels", "owcord.channel.get", "owcord.guild.roles",
-                 "owcord.interaction.delete_original" -> 1;
+                 "owcord.interaction.delete_original", "owcord.gateway.cache_guild",
+                 "owcord.gateway.cache_channel" -> 1;
             case "owcord.rest.dev_command", "owcord.rest.message",
                  "owcord.rest.followup", "owcord.rest.followup_private",
                  "owcord.rest.send_rich", "owcord.permissions.has",
@@ -52,7 +56,8 @@ public final class OWCordExtension implements RuntimeExtension {
                  "owcord.rest.message_delete", "owcord.guild.member",
                  "owcord.channel.delete", "owcord.v2.message_create",
                  "owcord.rest.component_defer_update",
-                 "owcord.interaction.edit_original", "owcord.interaction.delete_followup" -> 2;
+                 "owcord.interaction.edit_original", "owcord.interaction.delete_followup",
+                 "owcord.gateway.cache_member" -> 2;
             case "owcord.rest.reply", "owcord.rest.reply_private",
                  "owcord.rest.defer", "owcord.rest.reply_rich", "owcord.rest.reply_rich_private",
                  "owcord.rest.update_component", "owcord.rest.open_modal",
@@ -89,6 +94,14 @@ public final class OWCordExtension implements RuntimeExtension {
                 if (gateway != null) { gateway.close(); gateway = null; }
                 yield 1;
             }
+            case "owcord.gateway.intents" -> GatewayIntents.describe(
+                gateway == null ? intents() : gateway.requestedIntents());
+            case "owcord.gateway.cache_stats" -> activeGateway().cache().stats();
+            case "owcord.gateway.cache_guild" -> activeGateway().cache().getGuild(arg(args, 0));
+            case "owcord.gateway.cache_channel" -> activeGateway().cache().getChannel(arg(args, 0));
+            case "owcord.gateway.cache_member" -> activeGateway().cache().getMember(
+                arg(args, 0), arg(args, 1));
+            case "owcord.gateway.cache_clear" -> activeGateway().cache().clear();
             case "owcord.rest.dev_command" -> rest().registerGuildCommand(
                 requiredEnv("DISCORD_APPLICATION_ID"), requiredEnv("DISCORD_GUILD_ID"),
                 arg(args, 0), arg(args, 1));
@@ -232,13 +245,11 @@ public final class OWCordExtension implements RuntimeExtension {
     }
 
     private static int intents() {
-        try {
-            int result = Integer.parseInt(System.getenv().getOrDefault("OWCORD_GATEWAY_INTENTS", "1"));
-            if (result < 0) throw new NumberFormatException();
-            return result;
-        } catch (NumberFormatException e) {
-            throw new IllegalStateException("OWCORD_GATEWAY_INTENTS must be nonnegative integer");
-        }
+        return GatewayIntents.parse(System.getenv().getOrDefault("OWCORD_GATEWAY_INTENTS", "GUILDS"));
+    }
+    private DiscordGateway activeGateway() {
+        if (gateway == null) throw new IllegalStateException("Gateway is not connected");
+        return gateway;
     }
     private DiscordRest rest() {
         if (rest == null) rest = new DiscordRest(requiredEnv("DISCORD_BOT_TOKEN"));
