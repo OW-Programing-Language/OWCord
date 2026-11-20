@@ -41,7 +41,7 @@ class DiscordGuildRestTest {
         assertEquals(1, ((List<?>) Json.parse(DiscordGuildModel.roles("[" + ROLE + "]"))).size());
         assertEquals(1, ((List<?>) Json.parse(DiscordGuildModel.members("[" + MEMBER + "]"))).size());
         assertThrows(IllegalStateException.class, () -> DiscordGuildModel.member("{}"));
-        assertThrows(IllegalStateException.class, () -> DiscordGuildModel.role("{\"id\":\"444\"}"));
+        assertThrows(IllegalArgumentException.class, () -> DiscordGuildModel.role("{\"id\":\"444\"}"));
     }
 
     @Test void validatesMutationsAndAuditReasonBeforeNetwork() {
