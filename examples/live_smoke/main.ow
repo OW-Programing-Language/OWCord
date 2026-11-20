@@ -146,6 +146,19 @@ main:
   call: assert(deleted == 204, "live v0.7: delete bot-owned message")
   print: "LIVE PASS: deleted only the test message created in this run"
 
+  # v0.8 live inspection: read-only, no channel/role/member changes.
+  set guild_id: extension("owcord.test.guild_id")
+  set guild: bot.guild_get(guild_id)
+  call: assert(guild.id == guild_id, "live v0.8: guild ID")
+  call: assert(guild.name != "", "live v0.8: guild name")
+  set live_channel: bot.channel_get(channel)
+  call: assert(live_channel.id == channel, "live v0.8: channel ID")
+  set channels: bot.guild_channels(guild_id)
+  call: assert(len(channels) > 0, "live v0.8: visible guild channels")
+  set roles: bot.guild_roles(guild_id)
+  call: assert(len(roles) > 0, "live v0.8: at least one guild role")
+  print: "LIVE PASS: v0.8 guild, channel and role read-only REST inspection"
+
   call: assert(app.stop() == 1, "live v0.2: disconnect")
   print: "LIVE PASS: clean flOW shutdown"
   print: "LIVE V0.2 COMPLETE: real Discord Gateway, OW event parsing, command registration and message delivery"

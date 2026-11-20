@@ -1,0 +1,29 @@
+# OWCord v0.8 guild inspection demo — read-only.
+# Requires DISCORD_BOT_TOKEN, DISCORD_GUILD_ID and DISCORD_TEST_CHANNEL_ID.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "inspect: flOW boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+
+  set guild_id: extension("owcord.test.guild_id")
+  set channel_id: extension("owcord.test.channel_id")
+  set guild: bot.guild_get(guild_id)
+  print: "Guild: " + guild.name
+  set channels: bot.guild_channels(guild_id)
+  print: "Visible channels: " + str(len(channels))
+  set current: bot.channel_get(channel_id)
+  print: "Test channel: " + current.name
+  set roles: bot.guild_roles(guild_id)
+  print: "Guild roles: " + str(len(roles))
+  call: assert(app.stop() == 1, "inspect: clean shutdown")
