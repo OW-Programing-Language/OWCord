@@ -1,0 +1,26 @@
+# Read-only OWCord moderation permissions inspector.
+# NEVER changes live members or roles.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "moderation inspector: boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+  set guild: extension("owcord.test.guild_id")
+  set channel: extension("owcord.test.channel_id")
+  set bot_id: extension("owcord.test.application_id")
+  set perm: bot.effective_permissions(guild, bot_id, channel)
+  print: "My channel permissions: " + perm
+  set can_view: bot.has_permission(perm, "1024")
+  print: "Can view development channel: " + str(can_view)
+  call: assert(bot.can_moderate(guild, bot_id, bot_id, "kick") == 0, "cannot kick self")
+  call: assert(app.stop() == 1, "clean shutdown")

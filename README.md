@@ -143,3 +143,12 @@ smoke test creates and cleans up its own test message.
 Read guild metadata, visible channels, roles and individual/paginated members using typed OW records. Manage text channels, create unprivileged roles and grant/revoke member roles using **explicit, validated audit reasons**. The live integration suite exercises only read-only operations; write operations are verified with local HTTP tests.
 
 See [v0.8 guild API guide](docs/GUILDS-CHANNELS-ROLES.md) and [read-only inspection example](examples/guild_inspect/main.ow).
+
+## v0.9 — Permission Resolution & Moderation
+
+Calculate channel-specific member permission masks with owner/Administrator and
+overwrite precedence; preflight guild role hierarchy before sensitive operations.
+The OW API also exposes audited kick, ban/unban and timeout/remove-timeout
+methods with validated arguments. No real moderation is performed in the live
+test. See [Moderation and permission guide](docs/MODERATION-PERMISSIONS.md)
+and [read-only inspector](examples/moderation_inspect/main.ow).
