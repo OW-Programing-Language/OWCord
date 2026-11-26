@@ -25,6 +25,7 @@ main:
   set start_date: "2026-12-01"
   set end_date: "2026-12-24"
   set ready: false
+  set last_minute: ""
   call: assert(bot.command("advent", "Open your daily Christmas gift", "advent") == 1)
   call: assert(bot.command("claim", "Claim today's Christmas gift", "claim") == 1)
   call: assert(bot.command("rewards", "See your claimed Christmas gifts", "rewards") == 1)
@@ -61,6 +62,10 @@ main:
         set rewards: daily.history(guild, event.user_id, campaign, start_date, end_date)
         call: bot.edit_original(event, "You have collected " + str(len(rewards)) + " of 24 gifts.")
     if: ready
-      set job: daily.due(guild, campaign, zone, start_date, end_date, "00:00")
-      if: job.status == "due"
-        call: bot.send_message(channel, "A new Christmas gift is available! Use /advent to claim it.")
+      set calendar: daily.calendar(zone)
+      set minute_key: calendar.date + ":" + str(calendar.hour) + ":" + str(calendar.minute)
+      if: minute_key != last_minute
+        set last_minute: minute_key
+        set job: daily.due(guild, campaign, zone, start_date, end_date, "00:00")
+        if: job.status == "due"
+          call: bot.send_message(channel, "A new Christmas gift is available! Use /advent to claim it.")

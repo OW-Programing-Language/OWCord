@@ -1,20 +1,19 @@
 package org.owcord.runtime;
 
 import dev.oreo.Json;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
+import java.nio.file.Path;
 import java.time.*;
 import java.util.*;
 
 /** Persistent daily reservations. One immutable record per logical key. */
 final class DailyRewards {
-    private final Path root;
+    private final DailyRewardStorage storage;
     private final Clock clock;
     DailyRewards(Path root, Clock clock) {
-        this.root = root.toAbsolutePath().normalize();
+        this(new JsonDailyRewardStorage(root), clock);
+    }
+    DailyRewards(DailyRewardStorage storage, Clock clock) {
+        this.storage = Objects.requireNonNull(storage);
         this.clock = Objects.requireNonNull(clock);
     }
 
@@ -41,14 +40,16 @@ final class DailyRewards {
         return ZonedDateTime.now(clock.withZone(ZoneId.of(zone)));
     }
     Map<String, Object> calendar(String zone) {
-        ZonedDateTime n = now(zone);
+        return calendar(clock, zone);
+    }
+    static Map<String, Object> calendar(Clock clock, String zone) {
+        ZonedDateTime n = ZonedDateTime.now(clock.withZone(ZoneId.of(zone)));
         return Map.of("date", n.toLocalDate().toString(), "year", n.getYear(),
             "month", n.getMonthValue(), "day", n.getDayOfMonth(),
             "hour", n.getHour(), "minute", n.getMinute(), "zone", zone);
     }
-    private Path claimPath(String guild, String user, String campaign, LocalDate day) {
-        return root.resolve("claims").resolve(id(guild)).resolve(scope(campaign))
-            .resolve(id(user)).resolve(day + ".json");
+    private String claimPrefix(String guild, String user, String campaign) {
+        return "claims/" + id(guild) + "/" + scope(campaign) + "/" + id(user) + "/";
     }
     Map<String, Object> claim(String guild, String user, String campaign, String zone,
                               String start, String end, String reward) {
@@ -64,10 +65,10 @@ final class DailyRewards {
         Map<String, Object> record = Map.of("guild_id", guild, "user_id", user,
             "campaign", campaign, "date", day.toString(), "reward", reward,
             "claimed_at", n.toInstant().toString());
-        return reserve(claimPath(guild, user, campaign, day), record, "claimed", "duplicate");
+        return reserve(claimPrefix(guild, user, campaign) + day, record, "claimed", "duplicate");
     }
     Map<String, Object> lookup(String guild, String user, String campaign, String day) {
-        Map<String, Object> record = read(claimPath(guild, user, campaign, date(day)));
+        Map<String, Object> record = decode(storage.get(claimPrefix(guild, user, campaign) + date(day)));
         return record == null ? Map.of("status", "missing") : result("found", record);
     }
     List<Map<String, Object>> history(String guild, String user, String campaign,
@@ -76,9 +77,8 @@ final class DailyRewards {
         LocalDate first = date(start), last = date(end);
         validateRange(first, last);
         List<Map<String, Object>> records = new ArrayList<>();
-        for (LocalDate day = first; !day.isAfter(last); day = day.plusDays(1)) {
-            Map<String, Object> record = read(claimPath(guild, user, campaign, day));
-            if (record != null) records.add(record);
+        for (String json : storage.history(claimPrefix(guild, user, campaign), first, last)) {
+            records.add(decode(json));
         }
         return records;
     }
@@ -96,7 +96,7 @@ final class DailyRewards {
         if (day.isBefore(first) || day.isAfter(last) ||
             n.toInstant().isBefore(day.atTime(time).atZone(n.getZone()).toInstant()))
             return Map.of("status", "not_due", "date", day.toString());
-        Path path = root.resolve("jobs").resolve(guild).resolve(job).resolve(day + ".json");
+        String path = "jobs/" + guild + "/" + job + "/" + day;
         return reserve(path, Map.of("guild_id", guild, "job", job,
             "date", day.toString(), "reserved_at", n.toInstant().toString()),
             "due", "already_reserved");
@@ -107,48 +107,17 @@ final class DailyRewards {
         return out;
     }
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> read(Path path) {
-        try {
-            Object value = Json.parse(Files.readString(path, StandardCharsets.UTF_8));
-            if (!(value instanceof Map<?, ?>))
-                throw new IllegalStateException("Invalid daily reward record");
-            return (Map<String, Object>) value;
-        } catch (NoSuchFileException e) {
-            return null;
-        } catch (IOException | RuntimeException e) {
-            throw new IllegalStateException("Cannot read daily reward record", e);
-        }
+    private static Map<String, Object> decode(String json) {
+        if (json == null) return null;
+        Object value = Json.parse(json);
+        if (!(value instanceof Map<?, ?>))
+            throw new IllegalStateException("Invalid daily reward record");
+        return (Map<String, Object>) value;
     }
-    private static Map<String, Object> reserve(Path path, Map<String, Object> record,
-                                               String success, String duplicate) {
-        Map<String, Object> existing = read(path);
-        if (existing != null) return result(duplicate, existing);
-        Path temporary = null;
-        try {
-            Files.createDirectories(path.getParent());
-            temporary = Files.createTempFile(path.getParent(), ".claim-", ".tmp");
-            byte[] data = Json.write(record).getBytes(StandardCharsets.UTF_8);
-            try (FileChannel out = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
-                ByteBuffer buffer = ByteBuffer.wrap(data);
-                while (buffer.hasRemaining()) out.write(buffer);
-                out.force(true);
-            }
-            // Publish the fully written record atomically without replacing an existing
-            // claim. Hard links require a local filesystem supporting them; fail closed.
-            try {
-                Files.createLink(path, temporary);
-            } catch (FileAlreadyExistsException e) {
-                existing = read(path);
-                if (existing == null) throw new IllegalStateException("Reward record disappeared");
-                return result(duplicate, existing);
-            }
-            return result(success, record);
-        } catch (IOException | UnsupportedOperationException e) {
-            throw new IllegalStateException("Cannot persist daily reward reservation", e);
-        } finally {
-            if (temporary != null) {
-                try { Files.deleteIfExists(temporary); } catch (IOException ignored) { }
-            }
-        }
+    private Map<String, Object> reserve(String key, Map<String, Object> record,
+                                        String success, String duplicate) {
+        DailyRewardStorage.Reservation reservation = storage.reserve(key, Json.write(record));
+        return result(reservation.inserted() ? success : duplicate, decode(reservation.json()));
     }
+    void close() { storage.close(); }
 }

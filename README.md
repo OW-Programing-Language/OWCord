@@ -208,3 +208,8 @@ claim history. See [daily rewards](docs/DAILY-REWARDS.md) and the
 [Advent calendar example](examples/advent_calendar/main.ow). Existing REST rate
 limiting remains active, with improved deadline bookkeeping. External reward
 delivery requires separate idempotency/reconciliation; native LLVM is not supported.
+
+Storage is configurable without changing OW code: SQLite by default for new
+installations, JSON for existing JSON data, or PostgreSQL, MySQL, MariaDB and
+MongoDB. A Java ServiceLoader SPI supports additional providers. See the daily
+rewards guide for configuration and migration precautions.

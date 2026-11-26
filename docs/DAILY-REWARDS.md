@@ -8,7 +8,24 @@ Import `src/scheduling/DailyRewards.ow` and construct `new DailyRewards()`. Thes
 - `history(guild_id, user_id, campaign, start_date, end_date)`: ordered claim records, up to 366 calendar days.
 - `due(guild_id, job, zone, start_date, end_date, local_time)`: poll from an event loop; returns `due` once per local date at or after HH:mm, `already_reserved` thereafter, or `not_due`. On restart later the same day an unreserved occurrence can run; missed previous days are not replayed. DST gaps shift forward and overlaps use the earlier offset.
 
-Set `OWCORD_DATA_DIR` to an application-owned persistent directory (default `.owcord-data`). Mount that directory on a persistent volume in containers and restrict access; it stores Discord IDs and reward text, not tokens. Each claim/job is an immutable JSON file. The runtime writes and forces a temporary file before atomically publishing a hard link with no replacement. Concurrent threads or processes using the same local filesystem and directory cannot both reserve a key. Unsupported filesystems and I/O failures fail closed. Do not edit or delete records while the application is running. Backup the directory; retention, disaster recovery and power-loss directory durability are deployment responsibilities. Do not use network/distributed filesystems unless their atomic-link semantics are verified.
+## Storage configuration (no OW code changes)
+
+Choose a backend using environment variables. SQLite is the default for fresh installations; if the default data directory already has JSON claims/jobs, an unset provider preserves JSON. Explicit selection always wins. Database switches do not migrate records: stop writers, back up, migrate/verify every claim and job before switching an existing campaign, or use a new campaign. Never run one campaign across independent stores.
+
+| OWCORD_STORAGE | Configuration |
+| --- | --- |
+| sqlite | OWCORD_STORAGE_SQLITE_PATH (default .owcord-data/daily-rewards.db) |
+| json | OWCORD_DATA_DIR (default .owcord-data) |
+| postgresql | OWCORD_STORAGE_JDBC_URL=jdbc:postgresql://localhost:5432/owcord |
+| mysql | OWCORD_STORAGE_JDBC_URL=jdbc:mysql://localhost:3306/owcord |
+| mariadb | OWCORD_STORAGE_JDBC_URL=jdbc:mariadb://localhost:3306/owcord |
+| mongodb | OWCORD_STORAGE_MONGO_URI=mongodb://localhost:27017 and OWCORD_STORAGE_MONGO_DATABASE=owcord |
+
+SQL server providers also accept OWCORD_STORAGE_USER and OWCORD_STORAGE_PASSWORD. Use a dedicated database, TLS and restrictive credentials in production. The SQL schema is created automatically and uses a unique primary key; MongoDB uses the unique _id and majority writes. MongoDB assumes a collection with default simple/binary collation and no additional unique indexes. All SQL connections use autocommit; the database decides the single winner. SQL operations open a connection per call (no pool yet). Set appropriate connect/read timeouts in connection strings for remote databases. SQLite uses a busy timeout; keep SQLite and JSON on a persistent local volume with verified locking/hard-link semantics. JSON keeps the original atomic immutable-file format.
+
+Drivers are bundled into the JVM bridge jar. Custom providers can implement public DailyRewardStorage and DailyRewardStorageProvider, register the provider in META-INF/services/org.owcord.runtime.DailyRewardStorageProvider on the JVM classpath and select its lowercase name in OWCORD_STORAGE. A custom provider must implement atomic insert-if-absent, durable reads and consistent ordered history. There is no silent fallback on database errors. Only trusted provider jars should be installed.
+
+The database stores Discord IDs, reward text, and job timestamps; not Discord interaction tokens. Protect access, back up data and configure retention. SQL/MongoDB support multiple bot processes sharing the same database, but do not change Discord Gateway/REST coordination limits.
 
 ## Delivery boundary
 
