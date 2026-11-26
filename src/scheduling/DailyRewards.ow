@@ -1,0 +1,19 @@
+# Daily calendar and persistent, atomic reservations via OWCord JVM provider.
+class DailyRewards:
+  fn new():
+    return: 0
+
+  fn calendar(zone):
+    return: json_parse(extension("owcord.daily.calendar", zone))
+
+  fn claim(guild_id, user_id, campaign, zone, start_date, end_date, reward):
+    return: json_parse(extension("owcord.daily.claim", guild_id, user_id, campaign, zone, start_date, end_date, reward))
+
+  fn lookup(guild_id, user_id, campaign, date):
+    return: json_parse(extension("owcord.daily.lookup", guild_id, user_id, campaign, date))
+
+  fn history(guild_id, user_id, campaign, start_date, end_date):
+    return: json_parse(extension("owcord.daily.history", guild_id, user_id, campaign, start_date, end_date))
+
+  fn due(guild_id, job, zone, start_date, end_date, local_time):
+    return: json_parse(extension("owcord.daily.due", guild_id, job, zone, start_date, end_date, local_time))

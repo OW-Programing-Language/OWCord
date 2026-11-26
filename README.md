@@ -199,3 +199,17 @@ writes remain protected from automatic replay on ambiguous 5xx/IO failures.
 
 See [the v0.13 REST guide](docs/REST-ERRORS-OBSERVABILITY.md) and
 [the diagnostics example](examples/rest_diagnostics/main.ow).
+
+## v0.14 — Daily schedules and persistent rewards
+
+Use the JVM-backed `DailyRewards` OW facade for time-zone-aware calendar dates,
+once-per-day job reservations, atomic duplicate-safe reward claims and persistent
+claim history. See [daily rewards](docs/DAILY-REWARDS.md) and the
+[Advent calendar example](examples/advent_calendar/main.ow). Existing REST rate
+limiting remains active, with improved deadline bookkeeping. External reward
+delivery requires separate idempotency/reconciliation; native LLVM is not supported.
+
+Storage is configurable without changing OW code: SQLite by default for new
+installations, JSON for existing JSON data (explicit selection if both exist), or PostgreSQL, MySQL, MariaDB and
+MongoDB. A Java ServiceLoader SPI supports additional providers. See the daily
+rewards guide for configuration and migration precautions.

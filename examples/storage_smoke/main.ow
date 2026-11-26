@@ -1,0 +1,13 @@
+# Offline smoke of the packaged JVM bridge; repeated runs must preserve the record.
+import "../../src/scheduling/DailyRewards.ow"
+
+main:
+  set daily: new DailyRewards()
+  set calendar: daily.calendar("UTC")
+  set first: daily.claim("123", "456", "packaged-smoke", "UTC", calendar.date, calendar.date, "smoke-gift")
+  set duplicate: daily.claim("123", "456", "packaged-smoke", "UTC", calendar.date, calendar.date, "other")
+  call: assert(duplicate.status == "duplicate", "duplicate reservation")
+  call: assert(first.reward == duplicate.reward, "winning reward preserved")
+  set history: daily.history("123", "456", "packaged-smoke", calendar.date, calendar.date)
+  call: assert(len(history) == 1, "persistent history")
+  print: "OWCord SQLite packaged smoke passed"

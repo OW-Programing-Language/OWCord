@@ -1,0 +1,71 @@
+# Demonstration: one private virtual gift per user/day, plus daily public reminder.
+import "@flow/src/App.ow"
+import "../../src/gateway/api/GatewayApi.ow"
+import "../../src/gateway/infra/JvmGateway.ow"
+import "../../src/rest/api/RestApi.ow"
+import "../../src/rest/infra/JvmRest.ow"
+import "../../src/client/OWCordClient.ow"
+import "../../src/components/DiscordUI.ow"
+import "../../src/scheduling/DailyRewards.ow"
+
+main:
+  set app: new App()
+  call: app.use_native_as(OWCord.JvmGateway, "DISCORD_GATEWAY")
+  call: app.use_native_as(OWCord.JvmRest, "DISCORD_REST")
+  call: assert(app.boot() == 1, "advent: boot")
+  set gateway DISCORD_GATEWAY: app.service("gateway")
+  set rest DISCORD_REST: app.service("rest")
+  set bot: new OWCordClient(gateway, rest)
+  set daily: new DailyRewards()
+  set ui: new DiscordUI()
+  set guild: extension("owcord.test.guild_id")
+  set channel: extension("owcord.test.channel_id")
+  set campaign: "advent-2026"
+  set zone: "Europe/Paris"
+  set start_date: "2026-12-01"
+  set end_date: "2026-12-24"
+  set ready: false
+  set last_minute: ""
+  call: assert(bot.command("advent", "Open your daily Christmas gift", "advent") == 1)
+  call: assert(bot.command("claim", "Claim today's Christmas gift", "claim") == 1)
+  call: assert(bot.command("rewards", "See your claimed Christmas gifts", "rewards") == 1)
+  call: assert(bot.sync_dev_commands() == 1, "advent: register")
+  while: 1 == 1
+    set event: bot.next(250)
+    if: event.kind == "ready"
+      set ready: true
+    else if: event.kind == "error"
+      throw: "advent: Gateway error"
+    else if: event.guild_id == guild
+      set action: ""
+      if: event.kind == "command"
+        set action: event.handler
+      else if: event.kind == "component"
+        if: event.custom_id == "advent-2026-claim"
+          set action: "claim"
+      if: action == "advent"
+        set embed: ui.embed("Christmas Advent Calendar", "December 1 to 24. Claim one gift every day!", 13434880)
+        set row: ui.row([ui.button("advent-2026-claim", "Open today's gift", 1)])
+        call: bot.reply_rich_private(event, ui.message("", [embed], [row]))
+      else if: action == "claim"
+        call: bot.defer(event, 1)
+        set reward: "Christmas collectible"
+        set result: daily.claim(guild, event.user_id, campaign, zone, start_date, end_date, reward)
+        if: result.status == "claimed"
+          call: bot.edit_original(event, "Your gift: " + result.reward + " (" + result.date + ")")
+        else if: result.status == "duplicate"
+          call: bot.edit_original(event, "Already claimed: " + result.reward + " (" + result.date + ")")
+        else:
+          call: bot.edit_original(event, "The Advent calendar is closed.")
+      else if: action == "rewards"
+        call: bot.defer(event, 1)
+        set rewards: daily.history(guild, event.user_id, campaign, start_date, end_date)
+        call: bot.edit_original(event, "You have collected " + str(len(rewards)) + " of 24 gifts.")
+    if: ready
+      set calendar: daily.calendar(zone)
+      set minute_key: calendar.date + ":" + str(calendar.hour) + ":" + str(calendar.minute)
+      if: minute_key != last_minute
+        set last_minute: minute_key
+        set job: daily.due(guild, campaign, zone, start_date, end_date, "00:00")
+        if: job.status == "due"
+          call: bot.send_message(channel, "A new Christmas gift is available! Use /advent to claim it.")

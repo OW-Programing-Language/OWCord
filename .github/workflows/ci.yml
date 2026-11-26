@@ -25,6 +25,12 @@ jobs:
         run: mvn -B -ntp -f ow-lang/pom.xml -DskipTests install
       - name: Test Java runtime bridge
         run: mvn -B -ntp -f runtime-bridge/pom.xml verify
+      - name: Smoke test packaged SQLite provider through OW
+        run: |
+          export OWCORD_STORAGE=sqlite
+          export OWCORD_DATA_DIR="$(mktemp -d)"
+          java -cp "ow-lang/target/OwIDE.jar:runtime-bridge/target/owcord-runtime-0.1.0-SNAPSHOT.jar" dev.oreo.Main run examples/storage_smoke/main.ow
+          java -cp "ow-lang/target/OwIDE.jar:runtime-bridge/target/owcord-runtime-0.1.0-SNAPSHOT.jar" dev.oreo.Main run examples/storage_smoke/main.ow
       - name: Install flOW
         run: java -jar ow-lang/target/OwIDE.jar deps install
       - name: OW type checks
@@ -42,7 +48,75 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar check examples/gateway_cache/main.ow
           java -jar ow-lang/target/OwIDE.jar check examples/shard_status/main.ow
           java -jar ow-lang/target/OwIDE.jar check examples/rest_diagnostics/main.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/advent_calendar/main.ow
       - name: OW contract test
         run: java -jar ow-lang/target/OwIDE.jar run tests/headless_contracts.ow
       - name: OW v0.2 command and event unit tests
         run: java -jar ow-lang/target/OwIDE.jar test tests/
+  storage-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: owcord
+          POSTGRES_PASSWORD: owcord-test
+          POSTGRES_DB: owcord
+        ports:
+          - 15432:5432
+        options: >-
+          --health-cmd "pg_isready -U owcord -d owcord"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: owcord-root-test
+          MYSQL_DATABASE: owcord
+          MYSQL_USER: owcord
+          MYSQL_PASSWORD: owcord-test
+        ports:
+          - 13306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: owcord-root-test
+          MARIADB_DATABASE: owcord
+          MARIADB_USER: owcord
+          MARIADB_PASSWORD: owcord-test
+        ports:
+          - 13307:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+      mongodb:
+        image: mongo:7
+        ports:
+          - 17017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OW-Programing-Language/ow-lang
+          path: ow-lang
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: mvn -B -ntp -f ow-lang/pom.xml -DskipTests install
+      - name: Test real database providers
+        env:
+          OWCORD_STORAGE_USER: owcord
+          OWCORD_STORAGE_PASSWORD: owcord-test
+          OWCORD_STORAGE_MONGO_URI: mongodb://127.0.0.1:17017
+          OWCORD_STORAGE_MONGO_DATABASE: owcord
+        run: |
+          OWCORD_STORAGE_INTEGRATION=postgresql OWCORD_STORAGE_JDBC_URL=jdbc:postgresql://127.0.0.1:15432/owcord mvn -B -ntp -f runtime-bridge/pom.xml -Dtest=DailyRewardStorageTest#externalProvidersWhenConfigured test
+          OWCORD_STORAGE_INTEGRATION=mysql OWCORD_STORAGE_JDBC_URL='jdbc:mysql://127.0.0.1:13306/owcord?allowPublicKeyRetrieval=true&sslMode=DISABLED' mvn -B -ntp -f runtime-bridge/pom.xml -Dtest=DailyRewardStorageTest#externalProvidersWhenConfigured test
+          OWCORD_STORAGE_INTEGRATION=mariadb OWCORD_STORAGE_JDBC_URL=jdbc:mariadb://127.0.0.1:13307/owcord mvn -B -ntp -f runtime-bridge/pom.xml -Dtest=DailyRewardStorageTest#externalProvidersWhenConfigured test
+          OWCORD_STORAGE_INTEGRATION=mongodb mvn -B -ntp -f runtime-bridge/pom.xml -Dtest=DailyRewardStorageTest#externalProvidersWhenConfigured test

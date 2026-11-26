@@ -111,6 +111,11 @@ class DiscordReliabilityTest {
         assertEquals("none", DiscordRateLimiter.majorResource("gateway/bot"));
     }
 
+    @Test void freshLimiterDoesNotBlockNegativeMonotonicOrigin() {
+        DiscordRateLimiter limiter = new DiscordRateLimiter();
+        assertEquals(0, limiter.waitNanos("POST channels/*/messages", "channels/123", true, -500L));
+    }
+
     @Test void invalidGatewaySessionAndPermanentCloseCodesAreClassified() {
         assertTrue(DiscordGateway.requiresFreshSession(4007));
         assertTrue(DiscordGateway.requiresFreshSession(4009));

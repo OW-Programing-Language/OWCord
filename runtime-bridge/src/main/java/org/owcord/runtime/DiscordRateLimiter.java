@@ -4,7 +4,6 @@ import dev.oreo.Json;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Instance-scoped Discord rate limit tracker. Uses relative monotonic deadlines
@@ -16,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 final class DiscordRateLimiter {
     private final Map<String, String> bucketByRoute = new HashMap<>();
     private final Map<String, Long> blockedUntil = new HashMap<>();
-    private long globalUntil;
+    private Long globalUntil;
 
     /** Hide interaction tokens and interaction snowflakes from in-memory route keys. */
     static String routeKey(String method, String path) {
@@ -68,13 +67,14 @@ final class DiscordRateLimiter {
     }
 
     synchronized long waitNanos(String route, String major, boolean authorized, long now) {
-        long global = authorized ? globalUntil : 0;
-        long byRoute = blockedUntil.getOrDefault("route:" + route + ":" + major, 0L);
+        blockedUntil.values().removeIf(until -> remaining(until, now) == 0);
+        long global = authorized ? remaining(globalUntil, now) : 0;
+        long byRoute = remaining(blockedUntil.get("route:" + route + ":" + major), now);
         String sharedBucket = bucketByRoute.get(route);
         if (sharedBucket != null) {
-            byRoute = Math.max(byRoute, blockedUntil.getOrDefault("bucket:" + sharedBucket + ":" + major, 0L));
+            byRoute = Math.max(byRoute, remaining(blockedUntil.get("bucket:" + sharedBucket + ":" + major), now));
         }
-        return Math.max(0, Math.max(global, byRoute) - now);
+        return Math.max(global, byRoute);
     }
 
     synchronized void observe(String route, String major, boolean authorized, HttpResponse<String> response, long now) {
@@ -98,16 +98,26 @@ final class DiscordRateLimiter {
             response.headers().firstValue("X-RateLimit-Global").orElse("").equalsIgnoreCase("true") ||
             response.headers().firstValue("X-RateLimit-Scope").orElse("").equalsIgnoreCase("global") ||
             isGlobalResponse(response.body()));
-        if (global) globalUntil = Math.max(globalUntil, deadline(now, retry));
+        if (global && remaining(globalUntil, now) < remaining(deadline(now, retry), now))
+            globalUntil = deadline(now, retry);
     }
 
     private void block(String route, String major, long now, double seconds) {
         long until = deadline(now, seconds);
         String shared = bucketByRoute.get(route);
-        String key = shared == null ? "route:" + route : "bucket:" + shared + ":" + major;
-        blockedUntil.merge(key, until, Math::max);
+        if (shared != null) extend("bucket:" + shared + ":" + major, until, now);
         // Preserve route-scoped waits when Discord reveals/changes bucket IDs later.
-        blockedUntil.merge("route:" + route + ":" + major, until, Math::max);
+        extend("route:" + route + ":" + major, until, now);
+    }
+
+    private void extend(String key, long until, long now) {
+        if (remaining(blockedUntil.get(key), now) < remaining(until, now))
+            blockedUntil.put(key, until);
+    }
+
+    // nanoTime has an arbitrary origin and may be negative or wrap.
+    private static long remaining(Long until, long now) {
+        return until == null ? 0 : Math.max(0, until - now);
     }
 
     private static long deadline(long now, double seconds) {

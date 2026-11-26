@@ -1,6 +1,8 @@
 package org.owcord.runtime;
 
 import dev.oreo.RuntimeExtension;
+import dev.oreo.Json;
+import java.time.Clock;
 import java.util.List;
 import java.util.Set;
 
@@ -38,7 +40,14 @@ public final class OWCordExtension implements RuntimeExtension {
         "owcord.gateway.cache_guild", "owcord.gateway.cache_channel",
         "owcord.gateway.cache_member", "owcord.gateway.cache_clear",
         "owcord.gateway.shard_config", "owcord.gateway.shard_status",
-        "owcord.rest.metrics", "owcord.rest.last_error");
+        "owcord.rest.metrics", "owcord.rest.last_error",
+        "owcord.daily.calendar", "owcord.daily.claim", "owcord.daily.lookup",
+        "owcord.daily.history", "owcord.daily.due");
+    private DailyRewards daily;
+    private DailyRewards daily() {
+        if (daily == null) daily = new DailyRewards(DailyRewardStorageFactory.open(System.getenv()), Clock.systemUTC());
+        return daily;
+    }
     private DiscordRest rest;
     private DiscordShardManager gateway;
 
@@ -78,6 +87,11 @@ public final class OWCordExtension implements RuntimeExtension {
                  "owcord.moderation.timeout", "owcord.v2.reply",
                  "owcord.rest.global_context_command" -> 4;
             case "owcord.rest.reaction_users", "owcord.permissions.can_moderate" -> 5;
+            case "owcord.daily.calendar" -> 1;
+            case "owcord.daily.lookup" -> 4;
+            case "owcord.daily.history" -> 5;
+            case "owcord.daily.due" -> 6;
+            case "owcord.daily.claim" -> 7;
             default -> 0;
         };
         if (args.size() != required) throw new IllegalArgumentException("Wrong argument count for " + op);
@@ -106,6 +120,15 @@ public final class OWCordExtension implements RuntimeExtension {
             case "owcord.gateway.cache_clear" -> activeGateway().cacheClear();
             case "owcord.gateway.shard_config" -> GatewayShardConfig.fromEnvironment().summary();
             case "owcord.gateway.shard_status" -> activeGateway().status();
+            case "owcord.daily.calendar" -> Json.write(DailyRewards.calendar(Clock.systemUTC(), arg(args, 0)));
+            case "owcord.daily.claim" -> Json.write(daily().claim(arg(args, 0), arg(args, 1),
+                arg(args, 2), arg(args, 3), arg(args, 4), arg(args, 5), arg(args, 6)));
+            case "owcord.daily.lookup" -> Json.write(daily().lookup(arg(args, 0), arg(args, 1),
+                arg(args, 2), arg(args, 3)));
+            case "owcord.daily.history" -> Json.write(daily().history(arg(args, 0), arg(args, 1),
+                arg(args, 2), arg(args, 3), arg(args, 4)));
+            case "owcord.daily.due" -> Json.write(daily().due(arg(args, 0), arg(args, 1),
+                arg(args, 2), arg(args, 3), arg(args, 4), arg(args, 5)));
             case "owcord.rest.metrics" -> rest().metrics();
             case "owcord.rest.last_error" -> rest().lastError();
             case "owcord.rest.dev_command" -> rest().registerGuildCommand(
@@ -262,6 +285,7 @@ public final class OWCordExtension implements RuntimeExtension {
         return rest;
     }
     @Override public synchronized void close() {
-        if (gateway != null) { gateway.close(); gateway = null; }
+        try { if (gateway != null) { gateway.close(); gateway = null; } }
+        finally { if (daily != null) { daily.close(); daily = null; } }
     }
 }
