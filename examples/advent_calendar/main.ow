@@ -36,12 +36,17 @@ main:
     else if: event.kind == "error"
       throw: "advent: Gateway error"
     else if: event.guild_id == guild
-      if: event.kind == "command" && event.handler == "advent"
-        set calendar: daily.calendar(zone)
+      set action: ""
+      if: event.kind == "command"
+        set action: event.handler
+      else if: event.kind == "component"
+        if: event.custom_id == "advent-2026-claim"
+          set action: "claim"
+      if: action == "advent"
         set embed: ui.embed("Christmas Advent Calendar", "December 1 to 24. Claim one gift every day!", 13434880)
         set row: ui.row([ui.button("advent-2026-claim", "Open today's gift", 1)])
         call: bot.reply_rich_private(event, ui.message("", [embed], [row]))
-      else if: (event.kind == "command" && event.handler == "claim") || (event.kind == "component" && event.custom_id == "advent-2026-claim")
+      else if: action == "claim"
         call: bot.defer(event, 1)
         set reward: "Christmas collectible"
         set result: daily.claim(guild, event.user_id, campaign, zone, start_date, end_date, reward)
@@ -51,7 +56,7 @@ main:
           call: bot.edit_original(event, "Already claimed: " + result.reward + " (" + result.date + ")")
         else:
           call: bot.edit_original(event, "The Advent calendar is closed.")
-      else if: event.kind == "command" && event.handler == "rewards"
+      else if: action == "rewards"
         call: bot.defer(event, 1)
         set rewards: daily.history(guild, event.user_id, campaign, start_date, end_date)
         call: bot.edit_original(event, "You have collected " + str(len(rewards)) + " of 24 gifts.")
