@@ -26,6 +26,13 @@ class DailyRewardStorageTest {
         }
     }
 
+    @Test void refusesAmbiguousDefaultStorage() throws Exception {
+        Files.createDirectories(root.resolve("claims"));
+        Files.createFile(root.resolve("daily-rewards.db"));
+        assertThrows(IllegalStateException.class, () -> DailyRewardStorageFactory.open(
+            Map.of("OWCORD_DATA_DIR", root.toString())));
+    }
+
     @Test void invalidConfigurationFailsWithoutFallback() {
         assertThrows(IllegalArgumentException.class, () -> DailyRewardStorageFactory.open(Map.of("OWCORD_STORAGE", "unknown")));
         assertThrows(IllegalArgumentException.class, () -> DailyRewardStorageFactory.open(Map.of("OWCORD_STORAGE", "postgresql")));

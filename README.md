@@ -210,6 +210,6 @@ limiting remains active, with improved deadline bookkeeping. External reward
 delivery requires separate idempotency/reconciliation; native LLVM is not supported.
 
 Storage is configurable without changing OW code: SQLite by default for new
-installations, JSON for existing JSON data, or PostgreSQL, MySQL, MariaDB and
+installations, JSON for existing JSON data (explicit selection if both exist), or PostgreSQL, MySQL, MariaDB and
 MongoDB. A Java ServiceLoader SPI supports additional providers. See the daily
 rewards guide for configuration and migration precautions.

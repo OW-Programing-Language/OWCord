@@ -9,8 +9,14 @@ final class DailyRewardStorageFactory {
         Path root = Path.of(env.getOrDefault("OWCORD_DATA_DIR", ".owcord-data")).toAbsolutePath().normalize();
         String kind = env.getOrDefault("OWCORD_STORAGE", "").trim().toLowerCase(Locale.ROOT);
         // Preserve existing JSON deployments rather than silently resetting claim history.
-        if (kind.isEmpty())
-            kind = Files.exists(root.resolve("claims")) || Files.exists(root.resolve("jobs")) ? "json" : "sqlite";
+        if (kind.isEmpty()) {
+            boolean json = Files.exists(root.resolve("claims")) || Files.exists(root.resolve("jobs"));
+            Path sqlite = Path.of(env.getOrDefault("OWCORD_STORAGE_SQLITE_PATH",
+                root.resolve("daily-rewards.db").toString()));
+            if (json && Files.exists(sqlite))
+                throw new IllegalStateException("Both JSON and SQLite data exist; set OWCORD_STORAGE explicitly");
+            kind = json ? "json" : "sqlite";
+        }
         return switch (kind) {
             case "json" -> new JsonDailyRewardStorage(root);
             case "sqlite" -> sqlite(root, env);
@@ -32,7 +38,12 @@ final class DailyRewardStorageFactory {
                     }
                 }
                 if (selected == null) throw new IllegalArgumentException("Unknown OWCord storage provider");
-                yield Objects.requireNonNull(selected.open(Map.copyOf(env)));
+                Map<String, String> config = new HashMap<>();
+                env.forEach((key, value) -> {
+                    if (key.startsWith("OWCORD_STORAGE_") || key.equals("OWCORD_STORAGE") || key.equals("OWCORD_DATA_DIR"))
+                        config.put(key, value);
+                });
+                yield Objects.requireNonNull(selected.open(Map.copyOf(config)));
             }
         };
     }
